@@ -121,18 +121,28 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Configuration Cloudinary (Médias dans le cloud)
+CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', '').strip()
 CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME', '').strip()
 CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY', '').strip()
 CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET', '').strip()
 
-CLOUDINARY_STORAGE = {
-    'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
-    'API_KEY': CLOUDINARY_API_KEY,
-    'API_SECRET': CLOUDINARY_API_SECRET,
-}
+# Si CLOUDINARY_URL founi (fòma: cloudinary://API_KEY:API_SECRET@CLOUD_NAME)
+if CLOUDINARY_URL and not CLOUDINARY_CLOUD_NAME:
+    import re
+    match = re.match(r'cloudinary://([^:]+):([^@]+)@(.+)', CLOUDINARY_URL)
+    if match:
+        CLOUDINARY_API_KEY = match.group(1)
+        CLOUDINARY_API_SECRET = match.group(2)
+        CLOUDINARY_CLOUD_NAME = match.group(3)
 
-# Gestion des storages (Django 5.1)
-if CLOUDINARY_CLOUD_NAME:
+IS_CLOUDINARY_ACTIVE = bool(CLOUDINARY_CLOUD_NAME and CLOUDINARY_API_KEY and CLOUDINARY_API_SECRET) or bool(CLOUDINARY_URL)
+
+if IS_CLOUDINARY_ACTIVE:
+    CLOUDINARY_STORAGE = {
+        'CLOUD_NAME': CLOUDINARY_CLOUD_NAME,
+        'API_KEY': CLOUDINARY_API_KEY,
+        'API_SECRET': CLOUDINARY_API_SECRET,
+    }
     STORAGES = {
         "default": {
             "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
