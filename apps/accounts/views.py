@@ -200,27 +200,44 @@ class UnifiedLoginView(APIView):
     throttle_classes = [AuthRateThrottle]
 
     def post(self, request, *args, **kwargs):
-        phone = request.data.get('phone', '').strip().replace(" ", "").replace("-", "")
+        raw_identifier = (
+            request.data.get('identifier') or 
+            request.data.get('phone') or 
+            request.data.get('email') or 
+            ''
+        ).strip()
         password = request.data.get('password', '')
 
-        if not phone or not password:
+        if not raw_identifier or not password:
             return Response(
-                {"error": "Tanpri antre nimewo telefòn ou ak modpas ou."},
+                {"error": "Tanpri antre nimewo telefòn/imèl ou ak modpas ou."},
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Authentification par phone
-        try:
-            user = User.objects.get(phone=phone)
-            if not user.check_password(password):
-                return Response(
-                    {"error": "Nimewo telefòn oswa modpas la pa kòrèk."},
-                    status=status.HTTP_401_UNAUTHORIZED
-                )
-        except User.DoesNotExist:
+        # Chèche itilizatè a pa imèl, pa telefòn, oswa pa username
+        clean_phone = raw_identifier.replace(" ", "").replace("-", "")
+        clean_digits = clean_phone.lstrip('+')
+
+        user = User.objects.filter(
+            Q(email__iexact=raw_identifier) |
+            Q(phone=clean_phone) |
+            Q(phone=raw_identifier) |
+            Q(phone=f"+{clean_digits}") |
+            Q(phone=f"+509{clean_digits}") |
+            Q(phone=clean_digits) |
+            Q(username__iexact=raw_identifier)
+        ).first()
+
+        if not user:
             return Response(
-                {"error": "Pa gen pyès kont ki anrejistre ak nimewo sa a."},
+                {"error": "Pa gen pyès kont ki anrejistre ak enfòmasyon sa yo (telefòn oswa imèl)."},
                 status=status.HTTP_404_NOT_FOUND
+            )
+
+        if not user.check_password(password):
+            return Response(
+                {"error": "Nimewo telefòn/imèl oswa modpas la pa kòrèk."},
+                status=status.HTTP_401_UNAUTHORIZED
             )
 
         # Génération des tokens JWT
