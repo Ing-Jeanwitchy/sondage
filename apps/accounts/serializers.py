@@ -73,9 +73,9 @@ class CandidateRegistrationSerializer(serializers.Serializer):
 
     def validate_photo(self, value):
         if value:
-            max_size = 5 * 1024 * 1024  # 5 MB
+            max_size = 20 * 1024 * 1024  # 20 MB
             if value.size > max_size:
-                raise serializers.ValidationError("Fichye foto a twò lou. Gwosè maksimòm otorize a se 5 Mo (5MB).")
+                raise serializers.ValidationError("Fichye foto a twò lou. Gwosè maksimòm otorize a se 20 Mo (20MB).")
         return value
 
     def validate(self, attrs):

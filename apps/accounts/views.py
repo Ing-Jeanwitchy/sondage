@@ -571,9 +571,9 @@ class CandidateDashboardView(APIView):
 
         if 'photo' in request.FILES:
             photo_file = request.FILES['photo']
-            if photo_file.size > 5 * 1024 * 1024:
+            if photo_file.size > 20 * 1024 * 1024:
                 return Response(
-                    {"error": "Fichye foto a twò lou. Gwosè maksimòm otorize a se 5 Mo (5MB)."},
+                    {"error": "Fichye foto a twò lou. Gwosè maksimòm otorize a se 20 Mo (20MB)."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             profile.photo = photo_file

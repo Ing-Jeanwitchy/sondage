@@ -215,3 +215,7 @@ else:
     extra_origins = os.getenv('CORS_ALLOWED_ORIGINS', '')
     if extra_origins:
         CORS_ALLOWED_ORIGINS += [o.strip() for o in extra_origins.split(',') if o.strip()]
+
+# Limit telechajman fichye (25 MB pou pèmèt foto jiska 20 Mo)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25 MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25 MB
