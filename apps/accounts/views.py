@@ -77,7 +77,15 @@ class VoterRegisterView(APIView):
     def post(self, request, *args, **kwargs):
         serializer = VoterRegistrationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
-            voter_profile = serializer.save()
+            try:
+                voter_profile = serializer.save()
+            except Exception as err:
+                import logging
+                logging.getLogger('django').error(f"Erè save voter: {err}", exc_info=True)
+                return Response(
+                    {"error": f"Erè pandan kreyasyon kont la: {str(err)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             user = voter_profile.user
 
             # Génération des tokens JWT

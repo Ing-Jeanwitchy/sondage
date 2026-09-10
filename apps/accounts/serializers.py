@@ -15,6 +15,29 @@ from .models import (
 
 User = get_user_model()
 
+def extract_clean_ip(request):
+    """
+    Ekstrè epi netwaye adrès IP a pou evite erè fòma nan GenericIPAddressField (PostgreSQL/SQLite).
+    """
+    if not request:
+        return None
+    raw_ip = request.META.get('HTTP_X_FORWARDED_FOR')
+    if raw_ip:
+        ip_addr = raw_ip.split(',')[0].strip()
+    else:
+        ip_addr = request.META.get('REMOTE_ADDR', '').strip()
+
+    if not ip_addr:
+        return None
+
+    # Retire pò si genyen (eg: 192.168.1.1:8000 oswa [IPv6]:port)
+    if ':' in ip_addr and '.' in ip_addr:
+        ip_addr = ip_addr.split(':')[0].strip()
+    elif ip_addr.startswith('[') and ']' in ip_addr:
+        ip_addr = ip_addr.split(']')[0].lstrip('[')
+
+    return ip_addr or None
+
 class CandidateProfileSerializer(serializers.ModelSerializer):
     """
     Serializer pour l'affichage public et privé du profil d'un candidat.
@@ -145,21 +168,21 @@ class CandidateRegistrationSerializer(serializers.Serializer):
             **validated_data
         )
 
-        # Enskri anpwent inik aparèy la pou anpeche doub enskripsyon
         if device_fp:
             request = self.context.get('request')
-            ip_addr = None
-            ua = ''
-            if request:
-                ip_addr = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR')
-                ua = request.META.get('HTTP_USER_AGENT', '')
-            DeviceRegistration.objects.create(
-                device_fingerprint=device_fp,
-                user=user,
-                ip_address=ip_addr,
-                user_agent=ua,
-                role=UserRole.CANDIDATE
-            )
+            ip_addr = extract_clean_ip(request)
+            ua = request.META.get('HTTP_USER_AGENT', '') if request else ''
+            try:
+                DeviceRegistration.objects.create(
+                    device_fingerprint=device_fp,
+                    user=user,
+                    ip_address=ip_addr,
+                    user_agent=ua,
+                    role=UserRole.CANDIDATE
+                )
+            except Exception as dev_err:
+                import logging
+                logging.getLogger('django').warning(f"DeviceRegistration CANDIDATE warning: {dev_err}")
 
         return candidate_profile
 
@@ -255,18 +278,19 @@ class VoterRegistrationSerializer(serializers.Serializer):
         # 3. Enskri anpwent inik aparèy la pou anpeche doub enskripsyon
         if device_fp:
             request = self.context.get('request')
-            ip_addr = None
-            ua = ''
-            if request:
-                ip_addr = request.META.get('HTTP_X_FORWARDED_FOR', '').split(',')[0].strip() or request.META.get('REMOTE_ADDR')
-                ua = request.META.get('HTTP_USER_AGENT', '')
-            DeviceRegistration.objects.create(
-                device_fingerprint=device_fp,
-                user=user,
-                ip_address=ip_addr,
-                user_agent=ua,
-                role=UserRole.VOTER
-            )
+            ip_addr = extract_clean_ip(request)
+            ua = request.META.get('HTTP_USER_AGENT', '') if request else ''
+            try:
+                DeviceRegistration.objects.create(
+                    device_fingerprint=device_fp,
+                    user=user,
+                    ip_address=ip_addr,
+                    user_agent=ua,
+                    role=UserRole.VOTER
+                )
+            except Exception as dev_err:
+                import logging
+                logging.getLogger('django').warning(f"DeviceRegistration VOTER warning: {dev_err}")
 
         return voter_profile
 

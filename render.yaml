@@ -3,7 +3,7 @@ services:
     name: sondage-nord-ouest-api
     runtime: python
     buildCommand: "./build.sh"
-    startCommand: "gunicorn core.wsgi:application"
+    startCommand: "python manage.py migrate && gunicorn core.wsgi:application"
     plan: free
     region: oregon
     envVars:
