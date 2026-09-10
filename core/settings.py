@@ -23,8 +23,26 @@ if str(APPS_DIR) not in sys.path:
     sys.path.insert(0, str(APPS_DIR))
 
 # Clé secrète et debug
-SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-nord-ouest-haiti-sondage-preliminaire-secret-2026')
 DEBUG = os.getenv('DEBUG', 'True').lower() in ('true', '1', 'yes')
+
+_secret_key = os.getenv('SECRET_KEY', '').strip()
+if not _secret_key:
+    if DEBUG:
+        import warnings
+        _secret_key = 'django-dev-only-insecure-key-DO-NOT-USE-IN-PRODUCTION'
+        warnings.warn(
+            "⚠️  SECRET_KEY manquante ! Utilisation d'une clé de développement temporaire. "
+            "Définissez SECRET_KEY dans votre fichier .env avant tout déploiement en production.",
+            UserWarning,
+            stacklevel=1,
+        )
+    else:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured(
+            "ERREUR CRITIQUE : La variable d'environnement SECRET_KEY est obligatoire en production. "
+            "Ajoutez SECRET_KEY dans vos variables d'environnement (Render, .env, etc.)."
+        )
+SECRET_KEY = _secret_key
 
 # Domaines autorisés
 ALLOWED_HOSTS = [h.strip() for h in os.getenv('ALLOWED_HOSTS', '*').split(',') if h.strip()]

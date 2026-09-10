@@ -74,6 +74,11 @@ class User(AbstractUser):
         verbose_name_plural = "Utilisateurs"
         ordering = ['-created_at']
 
+    def save(self, *args, **kwargs):
+        if not self.email:
+            self.email = None
+        super().save(*args, **kwargs)
+
     def __str__(self):
         return f"{self.phone} ({self.get_role_display()})"
 
