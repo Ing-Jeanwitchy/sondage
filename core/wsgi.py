@@ -19,7 +19,12 @@ application = get_wsgi_application()
 try:
     from django.core.management import call_command
     call_command('migrate', interactive=False)
-except Exception as migrate_err:
+
+    # Si baz done a vid san kandida, peple li otomatikman ak done demo ofisyèl yo
+    from accounts.models import CandidateProfile
+    if CandidateProfile.objects.count() == 0:
+        call_command('seed_demo_data')
+except Exception as startup_err:
     import logging
-    logging.getLogger('django').warning(f"Auto-migration on WSGI startup: {migrate_err}")
+    logging.getLogger('django').warning(f"Auto-startup task on WSGI: {startup_err}")
 
