@@ -5,7 +5,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
 from django.utils import timezone
 from django.db.models import Q
-from .models import CandidateProfile, CandidateStatus, SurveyConfig, VoterProfile, DeviceRegistration
+from .models import CandidateProfile, CandidateStatus, SurveyConfig, VoterProfile, DeviceRegistration, UserRole
 from .serializers import (
     CandidateRegistrationSerializer, 
     CandidateProfileSerializer,
@@ -375,12 +375,44 @@ class AdminCandidateModerateView(APIView):
             candidate.status = CandidateStatus.REJECTED
             candidate.rejection_reason = reason or 'Dosye a pa satisfè kritè validasyon yo.'
             candidate.save()
+        elif action == 'delete':
+            full_name = f"{candidate.first_name} {candidate.last_name}"
+            user = candidate.user
+            if candidate.photo:
+                try:
+                    candidate.photo.delete(save=False)
+                except Exception:
+                    pass
+            candidate.delete()
+            if user and user.role == UserRole.CANDIDATE:
+                user.delete()
             return Response({
-                "message": f"Kandidati {candidate.first_name} {candidate.last_name} rejte.",
-                "candidate": CandidateProfileSerializer(candidate).data
+                "message": f"Kandida {full_name} efase nèt nan sistèm nan avèk siksè.",
+                "deleted_id": str(candidate_id)
             }, status=status.HTTP_200_OK)
 
-        return Response({"error": "Aksyon sa a pa valid. Sèl aksyon ki otorize se 'approve' oswa 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({"error": "Aksyon sa a pa valid. Sèl aksyon ki otorize se 'approve', 'reject' oswa 'delete'."}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, candidate_id, *args, **kwargs):
+        try:
+            candidate = CandidateProfile.objects.get(id=candidate_id)
+        except CandidateProfile.DoesNotExist:
+            return Response({"error": "Kandida sa a pa egziste nan sistèm nan."}, status=status.HTTP_404_NOT_FOUND)
+
+        full_name = f"{candidate.first_name} {candidate.last_name}"
+        user = candidate.user
+        if candidate.photo:
+            try:
+                candidate.photo.delete(save=False)
+            except Exception:
+                pass
+        candidate.delete()
+        if user and user.role == UserRole.CANDIDATE:
+            user.delete()
+        return Response({
+            "message": f"Kandida {full_name} efase nèt nan sistèm nan avèk siksè.",
+            "deleted_id": str(candidate_id)
+        }, status=status.HTTP_200_OK)
 
 
 class AdminSurveyConfigView(APIView):
@@ -627,6 +659,24 @@ class CandidateDashboardView(APIView):
         return Response({
             "message": "Pwofil ou mete ajou avèk siksè !",
             "profile": serializer.data
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request, *args, **kwargs):
+        try:
+            profile = request.user.candidate_profile
+        except CandidateProfile.DoesNotExist:
+            return Response({"error": "Profil kandida pa jwenn pou kont sa a."}, status=status.HTTP_404_NOT_FOUND)
+
+        user = request.user
+        if profile.photo:
+            try:
+                profile.photo.delete(save=False)
+            except Exception:
+                pass
+        profile.delete()
+        user.delete()
+        return Response({
+            "message": "Kandidati ou ak kont ou efase nèt nan sistèm nan avèk siksè."
         }, status=status.HTTP_200_OK)
 
 

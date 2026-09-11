@@ -304,3 +304,65 @@ class TestSurveyConfigAPI(TestCase):
         assert response.status_code == 200
         data = response.json()
         assert 'is_registration_open' in data
+
+
+class TestCandidateModerateAndDeletionAPI(TestCase):
+    """Tests pou modirasyon ak efasman kandida pa admin."""
+
+    def setUp(self):
+        self.admin = User.objects.create_user(
+            username='admin_del_test',
+            phone='+50937000088',
+            password='AdminPass123!',
+            role=UserRole.ADMIN,
+            is_staff=True
+        )
+        self.cand_user = User.objects.create_user(
+            username='cand_del_test',
+            phone='+50937000089',
+            password='CandPass123!',
+            role=UserRole.CANDIDATE
+        )
+        self.candidate = CandidateProfile.objects.create(
+            user=self.cand_user,
+            first_name='Jean',
+            last_name='Baptiste',
+            post=ElectivePostChoices.SENATEUR,
+            commune=CommuneChoices.PORT_DE_PAIX,
+            slogan='Pwogrè ak Transparans',
+            biography='Biyografi tès',
+            platform_priorities='Edikasyon, Sante'
+        )
+
+    def test_admin_delete_candidate_via_action_post(self):
+        """Admin ka efase yon kandida ak aksyon 'delete' nan endpoint moderate."""
+        client = APIClient()
+        client.force_authenticate(user=self.admin)
+        response = client.post(f'/api/admin/candidates/{self.candidate.id}/moderate/', {
+            'action': 'delete'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_200_OK
+        assert not CandidateProfile.objects.filter(id=self.candidate.id).exists()
+        assert not User.objects.filter(id=self.cand_user.id).exists()
+
+    def test_admin_delete_candidate_via_http_delete(self):
+        """Admin ka efase yon kandida dirèkteman ak vèb HTTP DELETE."""
+        client = APIClient()
+        client.force_authenticate(user=self.admin)
+        response = client.delete(f'/api/admin/candidates/{self.candidate.id}/moderate/')
+        assert response.status_code == http_status.HTTP_200_OK
+        assert not CandidateProfile.objects.filter(id=self.candidate.id).exists()
+
+    def test_voter_cannot_delete_candidate(self):
+        """Yon senp elektè pa gen dwa efase yon kandida."""
+        voter = User.objects.create_user(
+            username='voter_no_del',
+            phone='+50937000087',
+            password='VoterPass123!',
+            role=UserRole.VOTER
+        )
+        client = APIClient()
+        client.force_authenticate(user=voter)
+        response = client.delete(f'/api/admin/candidates/{self.candidate.id}/moderate/')
+        assert response.status_code == http_status.HTTP_403_FORBIDDEN
+        assert CandidateProfile.objects.filter(id=self.candidate.id).exists()
