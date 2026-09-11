@@ -53,3 +53,22 @@ class VoteReceiptSerializer(serializers.ModelSerializer):
             return f"{obj.candidate.first_name} {obj.candidate.last_name}".strip()
         return "Kandida Konfime"
 
+
+class PublicAnnouncementSerializer(serializers.ModelSerializer):
+    """
+    Serializer pou piblikasyon, kominike ak anons ofisyèl.
+    """
+    category_display = serializers.CharField(source='get_category_display', read_only=True)
+    author_phone = serializers.CharField(source='author.phone', read_only=True, default='')
+
+    class Meta:
+        from .models import PublicAnnouncement
+        model = PublicAnnouncement
+        fields = [
+            'id', 'title', 'content', 'category', 'category_display',
+            'author_name', 'author_phone', 'is_published',
+            'created_at', 'updated_at'
+        ]
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
+

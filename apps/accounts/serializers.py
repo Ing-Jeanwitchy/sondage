@@ -309,3 +309,161 @@ class UserDetailSerializer(serializers.ModelSerializer):
             'role', 'is_verified', 'candidate_profile',
             'voter_profile', 'created_at'
         ]
+
+
+class AdminCandidateDirectCreateSerializer(serializers.Serializer):
+    """
+    Serializer pou Admin ak Operatè Saisie ajoute yon kandida dirèkteman nan panèl la.
+    Pa gen kontrent fingerprint aparèy pou operatè a ka ajoute plizyè kandida.
+    """
+    phone = serializers.CharField(max_length=25, required=True)
+    first_name = serializers.CharField(max_length=100, required=True)
+    last_name = serializers.CharField(max_length=100, required=True)
+    email = serializers.EmailField(required=False, allow_blank=True, default='')
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True, default='')
+
+    post = serializers.ChoiceField(choices=ElectivePostChoices.choices, required=True)
+    commune = serializers.CharField(max_length=100, required=True)
+    custom_commune = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
+    section_or_city = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
+
+    photo = serializers.ImageField(required=False, allow_null=True)
+    slogan = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
+    biography = serializers.CharField(required=False, allow_blank=True, default='')
+    platform_priorities = serializers.CharField(required=False, allow_blank=True, default='')
+    status = serializers.ChoiceField(choices=CandidateStatus.choices, required=False, default=CandidateStatus.APPROVED)
+
+    def validate_phone(self, value):
+        cleaned_phone = value.strip().replace(" ", "").replace("-", "")
+        existing_user = User.objects.filter(phone=cleaned_phone).first()
+        if existing_user and hasattr(existing_user, 'candidate_profile'):
+            raise serializers.ValidationError("Gen yon kandida ki deja anrejistre ak nimewo telefòn sa a.")
+        return cleaned_phone
+
+    @transaction.atomic
+    def create(self, validated_data):
+        from django.utils import timezone
+        import secrets
+
+        phone = validated_data.pop('phone')
+        first_name = validated_data.pop('first_name').strip()
+        last_name = validated_data.pop('last_name').strip()
+        email = validated_data.pop('email', '').strip() or None
+        password = validated_data.pop('password', '').strip() or f"Kandida{secrets.randbelow(899999)+100000}!"
+        cand_status = validated_data.pop('status', CandidateStatus.APPROVED)
+
+        # Si user a te deja egziste san pwofil kandida
+        user = User.objects.filter(phone=phone).first()
+        if not user:
+            user = User.objects.create_user(
+                username=phone,
+                phone=phone,
+                email=email,
+                first_name=first_name,
+                last_name=last_name,
+                role=UserRole.CANDIDATE,
+                is_verified=True
+            )
+            user.set_password(password)
+            user.save()
+        else:
+            user.role = UserRole.CANDIDATE
+            user.first_name = first_name
+            user.last_name = last_name
+            if email and not user.email:
+                user.email = email
+            user.save()
+
+        # Rezoud komin
+        commune_val = validated_data.get('commune', '').strip()
+        custom_val = validated_data.pop('custom_commune', '').strip()
+        if commune_val in ['OTHER', 'LOT', 'AUTRE', 'Autre'] and custom_val:
+            validated_data['commune'] = custom_val
+        elif commune_val in ['OTHER', 'LOT', 'AUTRE', 'Autre']:
+            validated_data['commune'] = custom_val or 'Lòt Komin'
+
+        # Netwaye tèks
+        for field in ['slogan', 'biography', 'platform_priorities']:
+            if field in validated_data and validated_data[field]:
+                validated_data[field] = strip_tags(validated_data[field]).strip()
+
+        candidate_profile = CandidateProfile.objects.create(
+            user=user,
+            email=email or '',
+            first_name=first_name,
+            last_name=last_name,
+            status=cand_status,
+            validated_at=timezone.now() if cand_status == CandidateStatus.APPROVED else None,
+            **validated_data
+        )
+
+        return candidate_profile
+
+
+class TeamMemberSerializer(serializers.ModelSerializer):
+    """
+    Serializer pou afiche manm ekip jesyon an (ADMIN, MODERATOR, OPERATOR, COMMUNICATOR).
+    """
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    full_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'phone', 'email', 'first_name', 'last_name', 'full_name',
+            'role', 'role_display', 'is_active', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+    def get_full_name(self, obj):
+        name = f"{obj.first_name} {obj.last_name}".strip()
+        return name if name else obj.phone
+
+
+class TeamMemberCreateSerializer(serializers.Serializer):
+    """
+    Serializer pou Sipè Admin kreye yon nouvo kolaboratè nan ekip la.
+    """
+    phone = serializers.CharField(max_length=25, required=True)
+    password = serializers.CharField(write_only=True, min_length=6, required=True)
+    first_name = serializers.CharField(max_length=100, required=True)
+    last_name = serializers.CharField(max_length=100, required=False, allow_blank=True, default='')
+    email = serializers.EmailField(required=False, allow_blank=True, default='')
+    role = serializers.ChoiceField(
+        choices=[
+            ('ADMIN', 'Sipè Administratè'),
+            ('MODERATOR', 'Moderatè / Analis Dosye'),
+            ('OPERATOR', 'Operatè Saisie'),
+            ('COMMUNICATOR', 'Ofisye Kominikasyon'),
+        ],
+        required=True
+    )
+
+    def validate_phone(self, value):
+        cleaned_phone = value.strip().replace(" ", "").replace("-", "")
+        if User.objects.filter(phone=cleaned_phone).exists():
+            raise serializers.ValidationError("Gen yon kont ki deja itilize nimewo telefòn sa a.")
+        return cleaned_phone
+
+    def create(self, validated_data):
+        phone = validated_data['phone']
+        password = validated_data['password']
+        first_name = validated_data.get('first_name', '').strip()
+        last_name = validated_data.get('last_name', '').strip()
+        email = validated_data.get('email', '').strip() or None
+        role = validated_data['role']
+
+        user = User.objects.create_user(
+            username=phone,
+            phone=phone,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            role=role,
+            is_staff=True,
+            is_verified=True
+        )
+        user.set_password(password)
+        user.save()
+        return user
+

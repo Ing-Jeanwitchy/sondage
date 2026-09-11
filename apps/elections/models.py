@@ -88,3 +88,50 @@ class Vote(models.Model):
 
     def __str__(self):
         return f"Vòt {self.get_post_display()} pa {self.voter.phone} ({self.receipt_code})"
+
+
+class AnnouncementCategory(models.TextChoices):
+    COMMUNIQUE = 'COMMUNIQUE', 'Kominike Ofisyèl'
+    ALERT = 'ALERT', 'Alèt Enpòtan'
+    UPDATE = 'UPDATE', 'Mizajou Kalandriye'
+    GENERAL = 'GENERAL', 'Enfòmasyon Jeneral'
+
+
+class PublicAnnouncement(models.Model):
+    """
+    Modèl pou piblikasyon ak kominike ofisyèl Komisyon an oswa chaje kominikasyon an.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=255, verbose_name="Tit Pòs la")
+    content = models.TextField(verbose_name="Kontni / Tèks Kominike a")
+    category = models.CharField(
+        max_length=30,
+        choices=AnnouncementCategory.choices,
+        default=AnnouncementCategory.COMMUNIQUE,
+        verbose_name="Kategori"
+    )
+    author = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='announcements',
+        verbose_name="Otè"
+    )
+    author_name = models.CharField(
+        max_length=150, 
+        blank=True, 
+        default="Komisyon Elektoral Nòdwès", 
+        verbose_name="Non Otè a"
+    )
+    is_published = models.BooleanField(default=True, verbose_name="Pibliye")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Dat kreyasyon")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Dènye modifikasyon")
+
+    class Meta:
+        verbose_name = "Kominike & Piblikasyon"
+        verbose_name_plural = "Kominike & Piblikasyon yo"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"[{self.get_category_display()}] {self.title}"

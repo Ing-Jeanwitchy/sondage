@@ -11,10 +11,21 @@ from .serializers import (
     CandidateProfileSerializer,
     VoterRegistrationSerializer,
     VoterProfileSerializer,
-    UserDetailSerializer
+    UserDetailSerializer,
+    AdminCandidateDirectCreateSerializer,
+    TeamMemberSerializer,
+    TeamMemberCreateSerializer
 )
-from .permissions import IsAdminRole, IsCandidateRole
+from .permissions import (
+    IsStaffRole,
+    IsAdminRole,
+    CanModerateCandidates,
+    CanCreateCandidates,
+    CanManagePosts,
+    IsCandidateRole
+)
 from .throttles import AuthRateThrottle
+
 
 User = get_user_model()
 
@@ -319,9 +330,9 @@ class UserProfileView(APIView):
 
 class AdminCandidateListView(APIView):
     """
-    Endpoint pou administratè a liste tout dosye kandidati ak filtè pa estati (PENDING, APPROVED, REJECTED, ALL).
+    Endpoint pou manm ekip la (Admin, Moderatè, Operatè) liste tout dosye kandidati ak filtè pa estati.
     """
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsStaffRole]
 
     def get(self, request, *args, **kwargs):
         status_filter = request.query_params.get('status', 'ALL')
@@ -346,11 +357,33 @@ class AdminCandidateListView(APIView):
         }, status=status.HTTP_200_OK)
 
 
+class AdminCandidateCreateView(APIView):
+    """
+    Endpoint pou Administratè ak Operatè Saisie ajoute yon nouvo kandida dirèkteman nan panèl la.
+    """
+    permission_classes = [CanCreateCandidates]
+
+    def post(self, request, *args, **kwargs):
+        serializer = AdminCandidateDirectCreateSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            candidate = serializer.save()
+            return Response({
+                "message": f"Kandida {candidate.first_name} {candidate.last_name} te ajoute avèk siksè !",
+                "candidate": CandidateProfileSerializer(candidate).data
+            }, status=status.HTTP_201_CREATED)
+        
+        first_err = None
+        for k, v in serializer.errors.items():
+            first_err = v[0] if isinstance(v, list) and len(v) > 0 else str(v)
+            break
+        return Response({"error": first_err or "Erè nan fòmilè kreyasyon kandida a.", "details": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
 class AdminCandidateModerateView(APIView):
     """
-    Endpoint pou administratè a apwouve oswa rejte yon dosye kandidati.
+    Endpoint pou administratè ak moderatè apwouve, rejte oswa efase yon dosye kandidati.
     """
-    permission_classes = [IsAdminRole]
+    permission_classes = [CanModerateCandidates]
 
     def post(self, request, candidate_id, *args, **kwargs):
         try:
@@ -358,7 +391,7 @@ class AdminCandidateModerateView(APIView):
         except CandidateProfile.DoesNotExist:
             return Response({"error": "Kandida sa a pa egziste nan sistèm nan."}, status=status.HTTP_404_NOT_FOUND)
 
-        action = request.data.get('action') # 'approve' | 'reject'
+        action = request.data.get('action') # 'approve' | 'reject' | 'delete'
         reason = request.data.get('reason', '')
 
         if action == 'approve':
@@ -375,6 +408,11 @@ class AdminCandidateModerateView(APIView):
             candidate.status = CandidateStatus.REJECTED
             candidate.rejection_reason = reason or 'Dosye a pa satisfè kritè validasyon yo.'
             candidate.save()
+            return Response({
+                "message": f"Kandidati {candidate.first_name} {candidate.last_name} rejte.",
+                "candidate": CandidateProfileSerializer(candidate).data
+            }, status=status.HTTP_200_OK)
+
         elif action == 'delete':
             full_name = f"{candidate.first_name} {candidate.last_name}"
             user = candidate.user
@@ -413,6 +451,7 @@ class AdminCandidateModerateView(APIView):
             "message": f"Kandida {full_name} efase nèt nan sistèm nan avèk siksè.",
             "deleted_id": str(candidate_id)
         }, status=status.HTTP_200_OK)
+
 
 
 class AdminSurveyConfigView(APIView):
@@ -480,7 +519,7 @@ class AdminDashboardStatsView(APIView):
     Endpoint pou rekipere estatistik konplè ak 100% dinamik pou Tablo Admin lan :
     Total vòt reyèl, patisipan reyèl, to patisipasyon, repatisyon reyèl pa pòs ak pa komin.
     """
-    permission_classes = [IsAdminRole]
+    permission_classes = [IsStaffRole]
 
     def get(self, request, *args, **kwargs):
         from elections.models import Vote
@@ -586,6 +625,71 @@ class AdminPurgeTestDataView(APIView):
             "deleted_voters": deleted_voters_count,
             "deleted_pending_candidates": deleted_pending_count
         }, status=status.HTTP_200_OK)
+
+
+class AdminTeamListView(APIView):
+    """
+    Endpoint pou Sipè Admin konsilte lis tout manm ekip sipèvizyon an (Moderatè, Operatè, Kominikatè, Admin).
+    """
+    permission_classes = [IsAdminRole]
+
+    def get(self, request, *args, **kwargs):
+        staff_roles = [UserRole.ADMIN, UserRole.MODERATOR, UserRole.OPERATOR, UserRole.COMMUNICATOR]
+        team_members = User.objects.filter(role__in=staff_roles).order_by('-created_at')
+        serializer = TeamMemberSerializer(team_members, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminTeamCreateView(APIView):
+    """
+    Endpoint pou Sipè Admin kreye yon nouvo kolaboratè nan ekip la.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, *args, **kwargs):
+        serializer = TeamMemberCreateSerializer(data=request.data, context={'request': request})
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response({
+                "message": f"Kolaboratè {user.first_name} {user.last_name} ({user.get_role_display()}) te kreye avèk siksè !",
+                "member": TeamMemberSerializer(user).data
+            }, status=status.HTTP_201_CREATED)
+        
+        first_err = None
+        for k, v in serializer.errors.items():
+            first_err = v[0] if isinstance(v, list) and len(v) > 0 else str(v)
+            break
+        return Response({"error": first_err or "Erè nan kreyasyon manm ekip la.", "details": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminTeamDeleteView(APIView):
+    """
+    Endpoint pou Sipè Admin dezaktive oswa efase yon kolaboratè.
+    """
+    permission_classes = [IsAdminRole]
+
+    def delete(self, request, user_id=None, *args, **kwargs):
+        target_id = user_id or request.data.get('user_id') or request.query_params.get('user_id')
+        if not target_id:
+            return Response({"error": "ID itilizatè a obligatwa."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if str(request.user.id) == str(target_id):
+            return Response({"error": "Ou pa ka efase pwòp kont pa w."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user_to_delete = User.objects.get(id=target_id)
+        except User.DoesNotExist:
+            return Response({"error": "Itilizatè sa a pa egziste nan sistèm nan."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user_to_delete.phone == '+50930000000':
+            return Response({"error": "Kont Sipè Administratè Prensipal la pa ka efase."}, status=status.HTTP_403_FORBIDDEN)
+
+        full_name = f"{user_to_delete.first_name} {user_to_delete.last_name}".strip() or user_to_delete.phone
+        user_to_delete.delete()
+        return Response({
+            "message": f"Kont kolaboratè {full_name} efase avèk siksè nan sistèm nan."
+        }, status=status.HTTP_200_OK)
+
 
 
 class CandidateDashboardView(APIView):

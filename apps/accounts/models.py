@@ -3,9 +3,12 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 
 class UserRole(models.TextChoices):
-    ADMIN = 'ADMIN', 'Administrateur'
-    CANDIDATE = 'CANDIDATE', 'Candidat'
-    VOTER = 'VOTER', 'Participant / Électeur'
+    ADMIN = 'ADMIN', 'Sipè Administratè'
+    MODERATOR = 'MODERATOR', 'Moderatè / Analis Dosye'
+    OPERATOR = 'OPERATOR', 'Operatè Saisie'
+    COMMUNICATOR = 'COMMUNICATOR', 'Ofisye Kominikasyon'
+    CANDIDATE = 'CANDIDATE', 'Kandida'
+    VOTER = 'VOTER', 'Patisipan / Électeur'
 
 class ElectivePostChoices(models.TextChoices):
     SENATEUR = 'SENATEUR', 'Sénateur (Département du Nord-Ouest)'

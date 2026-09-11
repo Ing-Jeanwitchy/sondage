@@ -4,14 +4,16 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db import transaction
 from accounts.models import CandidateProfile, CandidateStatus, ElectivePostChoices, CommuneChoices
-from accounts.permissions import IsAdminRole
+from accounts.permissions import IsAdminRole, CanManagePosts, IsStaffRole
 from accounts.throttles import VoteRateThrottle
-from .models import Vote
+from .models import Vote, PublicAnnouncement
 from .serializers import (
     BallotCandidateSerializer,
     CastVoteSerializer,
-    VoteReceiptSerializer
+    VoteReceiptSerializer,
+    PublicAnnouncementSerializer
 )
+
 
 class BallotListView(APIView):
     """
@@ -352,3 +354,69 @@ class AdminVoteAuditView(APIView):
             "total_audited": len(audit_data),
             "audit_logs": audit_data
         }, status=status.HTTP_200_OK)
+
+
+class PublicAnnouncementListView(APIView):
+    """
+    Endpoint piblik pou tout sitwayen konsilte anons ak kominike ofisyèl yo.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        announcements = PublicAnnouncement.objects.filter(is_published=True).order_by('-created_at')
+        category = request.query_params.get('category')
+        if category:
+            announcements = announcements.filter(category=category)
+        serializer = PublicAnnouncementSerializer(announcements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class AdminAnnouncementView(APIView):
+    """
+    Endpoint pou Kominikatè ak Admin kreye, liste ak jere kominike/anons yo.
+    """
+    permission_classes = [CanManagePosts]
+
+    def get(self, request, *args, **kwargs):
+        announcements = PublicAnnouncement.objects.all().order_by('-created_at')
+        serializer = PublicAnnouncementSerializer(announcements, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, *args, **kwargs):
+        title = request.data.get('title', '').strip()
+        content = request.data.get('content', '').strip()
+        category = request.data.get('category', 'COMMUNIQUE')
+        author_name = request.data.get('author_name', '').strip()
+        is_published = request.data.get('is_published', True)
+
+        if not title or not content:
+            return Response({"error": "Tit ak kontni kominike a obligatwa."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not author_name:
+            user = request.user
+            author_name = f"{user.first_name} {user.last_name}".strip() or "Komisyon Kominikasyon"
+
+        announcement = PublicAnnouncement.objects.create(
+            title=title,
+            content=content,
+            category=category,
+            author=request.user,
+            author_name=author_name,
+            is_published=is_published
+        )
+        return Response({
+            "message": "Kominike a pibliye avèk siksè !",
+            "announcement": PublicAnnouncementSerializer(announcement).data
+        }, status=status.HTTP_201_CREATED)
+
+    def delete(self, request, pk=None, *args, **kwargs):
+        post_id = pk or request.data.get('id') or request.query_params.get('id')
+        if not post_id:
+            return Response({"error": "ID kominike a obligatwa."}, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            announcement = PublicAnnouncement.objects.get(id=post_id)
+            announcement.delete()
+            return Response({"message": "Kominike a efase avèk siksè !"}, status=status.HTTP_200_OK)
+        except PublicAnnouncement.DoesNotExist:
+            return Response({"error": "Kominike sa a pa egziste."}, status=status.HTTP_404_NOT_FOUND)
+

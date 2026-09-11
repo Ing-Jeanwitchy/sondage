@@ -391,3 +391,155 @@ class TestCandidateModerateAndDeletionAPI(TestCase):
         assert response.status_code == http_status.HTTP_200_OK
         assert Vote.objects.count() == 0
         assert not User.objects.filter(role=UserRole.VOTER).exists()
+
+
+# ============================================================
+# Tests Kolaboratè & Wòl RBAC (Admin, Moderatè, Operatè, Kominikatè)
+# ============================================================
+
+class TestTeamAndRBAC(TestCase):
+    """
+    Tests sistèm manm ekip ak pèmisyon pa wòl :
+    - Moderatè ka modere kandida
+    - Operatè ka kreye kandida dirèkteman
+    - Kominikatè ka kreye pòs/kominike
+    - Sipè Admin ka jere ekip la
+    """
+
+    def setUp(self):
+        self.super_admin = User.objects.create_user(
+            username='admin_boss',
+            phone='+50930000000',
+            password='AdminPass123!',
+            role=UserRole.ADMIN,
+            is_staff=True,
+            is_superuser=True
+        )
+        self.moderator = User.objects.create_user(
+            username='mod_user',
+            phone='+50937000050',
+            password='ModPass123!',
+            role=UserRole.MODERATOR,
+            is_staff=True
+        )
+        self.operator = User.objects.create_user(
+            username='op_user',
+            phone='+50937000060',
+            password='OpPass123!',
+            role=UserRole.OPERATOR,
+            is_staff=True
+        )
+        self.communicator = User.objects.create_user(
+            username='com_user',
+            phone='+50937000070',
+            password='ComPass123!',
+            role=UserRole.COMMUNICATOR,
+            is_staff=True
+        )
+        self.voter = User.objects.create_user(
+            username='citizen',
+            phone='+50937000080',
+            password='CitizenPass123!',
+            role=UserRole.VOTER
+        )
+
+        cand_user = User.objects.create_user(
+            username='cand_rbac',
+            phone='+50937000090',
+            password='CandPass123!',
+            role=UserRole.CANDIDATE
+        )
+        self.candidate = CandidateProfile.objects.create(
+            user=cand_user,
+            first_name='Jean',
+            last_name='Pierre',
+            post=ElectivePostChoices.MAIRE,
+            commune='PORT_DE_PAIX',
+            status='PENDING'
+        )
+
+    def test_super_admin_create_team_member(self):
+        """Sipè Admin ka kreye yon nouvo manm ekip."""
+        client = APIClient()
+        client.force_authenticate(user=self.super_admin)
+        response = client.post('/api/admin/team/create/', {
+            'phone': '+50937999999',
+            'password': 'StaffPassword123!',
+            'first_name': 'Marie',
+            'last_name': 'Duval',
+            'role': 'MODERATOR'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_201_CREATED
+        assert User.objects.filter(phone='+50937999999', role=UserRole.MODERATOR).exists()
+
+    def test_moderator_cannot_create_team_member(self):
+        """Moderatè pa gen dwa kreye lòt manm ekip."""
+        client = APIClient()
+        client.force_authenticate(user=self.moderator)
+        response = client.post('/api/admin/team/create/', {
+            'phone': '+50937888888',
+            'password': 'StaffPassword123!',
+            'first_name': 'Alex',
+            'role': 'OPERATOR'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_403_FORBIDDEN
+
+    def test_moderator_can_approve_candidate(self):
+        """Moderatè ka apwouve yon kandida."""
+        client = APIClient()
+        client.force_authenticate(user=self.moderator)
+        response = client.post(f'/api/admin/candidates/{self.candidate.id}/moderate/', {
+            'action': 'approve'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_200_OK
+        self.candidate.refresh_from_db()
+        assert self.candidate.status == 'APPROVED'
+
+    def test_operator_cannot_moderate_candidate(self):
+        """Operatè pa ka apwouve/rejte dosye kandida."""
+        client = APIClient()
+        client.force_authenticate(user=self.operator)
+        response = client.post(f'/api/admin/candidates/{self.candidate.id}/moderate/', {
+            'action': 'approve'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_403_FORBIDDEN
+
+    def test_operator_can_create_candidate_directly(self):
+        """Operatè ka ajoute yon kandida dirèkteman depi panèl la."""
+        client = APIClient()
+        client.force_authenticate(user=self.operator)
+        response = client.post('/api/admin/candidates/create/', {
+            'phone': '+50936112233',
+            'first_name': 'Paul',
+            'last_name': 'Destin',
+            'post': 'SENATEUR',
+            'commune': 'PORT_DE_PAIX',
+            'slogan': 'Yon Nòdwès Pi Fò',
+            'status': 'APPROVED'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_201_CREATED
+        assert CandidateProfile.objects.filter(first_name='Paul', last_name='Destin').exists()
+
+    def test_communicator_can_publish_and_delete_announcement(self):
+        """Kominikatè ka pibliye epi efase yon kominike."""
+        client = APIClient()
+        client.force_authenticate(user=self.communicator)
+        # 1. Pibliye
+        res = client.post('/api/elections/admin/announcements/', {
+            'title': 'Ouvèti Ofisyèl Vòt la',
+            'content': 'Vòt la louvri pou tout sitwayen nan 10 komin yo.',
+            'category': 'COMMUNIQUE'
+        }, format='json')
+        assert res.status_code == http_status.HTTP_201_CREATED
+        announcement_id = res.data['announcement']['id']
+
+        # 2. Piblik ka wè l
+        pub_client = APIClient()
+        pub_res = pub_client.get('/api/elections/announcements/')
+        assert pub_res.status_code == http_status.HTTP_200_OK
+        assert len(pub_res.data) >= 1
+
+        # 3. Kominikatè efase l
+        del_res = client.delete(f'/api/elections/admin/announcements/{announcement_id}/')
+        assert del_res.status_code == http_status.HTTP_200_OK
+
