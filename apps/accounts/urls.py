@@ -11,6 +11,7 @@ from .views import (
     AdminCandidateModerateView,
     AdminSurveyConfigView,
     AdminDashboardStatsView,
+    AdminPurgeTestDataView,
     CandidateDashboardView,
     CheckDeviceRegistrationView,
     VoterDashboardView
@@ -31,4 +32,5 @@ urlpatterns = [
     path('admin/candidates/<uuid:candidate_id>/moderate/', AdminCandidateModerateView.as_view(), name='admin-candidate-moderate'),
     path('admin/survey-config/', AdminSurveyConfigView.as_view(), name='admin-survey-config'),
     path('admin/stats/', AdminDashboardStatsView.as_view(), name='admin-stats'),
+    path('admin/purge-test-data/', AdminPurgeTestDataView.as_view(), name='admin-purge-test-data'),
 ]

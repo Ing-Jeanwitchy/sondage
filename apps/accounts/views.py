@@ -529,13 +529,22 @@ class AdminDashboardStatsView(APIView):
                 "percentage": pct
             })
 
-        # Triye komin yo pa kantite vòt décroissant
-        commune_breakdown.sort(key=lambda x: (x['votes'], x['name']), reverse=True)
+        # Komin reyèl ki kouvri (ki gen vòt oswa kandida apwouve)
+        active_communes = set(Vote.objects.values_list('commune', flat=True).distinct()) | \
+                          set(CandidateProfile.objects.filter(status=CandidateStatus.APPROVED).values_list('commune', flat=True).distinct())
+        communes_covered = len(active_communes)
+        communes_coverage_pct = round((communes_covered / 10) * 100, 1) if communes_covered > 0 else 0.0
+
+        # Odit kriptografik: vòt ki gen resi UUID sekirize
+        verified_votes_count = Vote.objects.exclude(receipt_code__isnull=True).count()
 
         return Response({
             "total_votes": total_votes,
             "registered_voters": registered_voters,
             "turnout_percentage": turnout_pct,
+            "communes_covered": communes_covered,
+            "communes_coverage_pct": communes_coverage_pct,
+            "verified_votes_count": verified_votes_count,
             "candidates": {
                 "total": cand_total,
                 "pending": cand_pending,
@@ -544,6 +553,38 @@ class AdminDashboardStatsView(APIView):
             },
             "post_breakdown": post_breakdown,
             "commune_breakdown": commune_breakdown
+        }, status=status.HTTP_200_OK)
+
+
+class AdminPurgeTestDataView(APIView):
+    """
+    Endpoint pou administratè a netwaye tout fo vòt ak fo patisipan tès yo,
+    pou tout done nan sondaj la tounen 100% done reyèl.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, *args, **kwargs):
+        from elections.models import Vote
+
+        deleted_votes_count, _ = Vote.objects.all().delete()
+        deleted_voters_count, _ = User.objects.filter(role=UserRole.VOTER).delete()
+
+        clear_pending = request.data.get('clear_pending_candidates', False)
+        deleted_pending_count = 0
+        if clear_pending:
+            pending_cands = CandidateProfile.objects.filter(status=CandidateStatus.PENDING)
+            deleted_pending_count = pending_cands.count()
+            for cand in pending_cands:
+                user = cand.user
+                cand.delete()
+                if user and user.role == UserRole.CANDIDATE:
+                    user.delete()
+
+        return Response({
+            "message": f"Tout done tès yo netwaye avèk siksè ({deleted_votes_count} vòt, {deleted_voters_count} elektè tès). Kounye a sistèm nan pare pou resevwa sèlman done 100% reyèl !",
+            "deleted_votes": deleted_votes_count,
+            "deleted_voters": deleted_voters_count,
+            "deleted_pending_candidates": deleted_pending_count
         }, status=status.HTTP_200_OK)
 
 

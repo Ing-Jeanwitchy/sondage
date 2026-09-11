@@ -366,3 +366,28 @@ class TestCandidateModerateAndDeletionAPI(TestCase):
         response = client.delete(f'/api/admin/candidates/{self.candidate.id}/moderate/')
         assert response.status_code == http_status.HTTP_403_FORBIDDEN
         assert CandidateProfile.objects.filter(id=self.candidate.id).exists()
+
+    def test_admin_purge_test_data(self):
+        """Admin ka netwaye tout done tès yo pou kite sèlman done reyèl."""
+        from elections.models import Vote
+        # Kreye yon fo vòt
+        voter = User.objects.create_user(
+            username='voter_purge_test',
+            phone='+50937000086',
+            password='VoterPass123!',
+            role=UserRole.VOTER
+        )
+        Vote.objects.create(
+            voter=voter,
+            candidate=self.candidate,
+            post=self.candidate.post,
+            commune=self.candidate.commune
+        )
+        assert Vote.objects.count() >= 1
+
+        client = APIClient()
+        client.force_authenticate(user=self.admin)
+        response = client.post('/api/admin/purge-test-data/', {'clear_pending_candidates': True}, format='json')
+        assert response.status_code == http_status.HTTP_200_OK
+        assert Vote.objects.count() == 0
+        assert not User.objects.filter(role=UserRole.VOTER).exists()
