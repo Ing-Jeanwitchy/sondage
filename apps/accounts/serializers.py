@@ -467,3 +467,78 @@ class TeamMemberCreateSerializer(serializers.Serializer):
         user.save()
         return user
 
+
+class AdminUserDetailSerializer(serializers.ModelSerializer):
+    """
+    Serializer konplè pou jesyon tout itilizatè sistèm nan (Elektè, Kandida, Ekip).
+    """
+    role_display = serializers.CharField(source='get_role_display', read_only=True)
+    full_name = serializers.SerializerMethodField()
+    voter_info = serializers.SerializerMethodField()
+    candidate_info = serializers.SerializerMethodField()
+    device_count = serializers.SerializerMethodField()
+
+    class Meta:
+        model = User
+        fields = [
+            'id', 'phone', 'email', 'first_name', 'last_name', 'full_name',
+            'role', 'role_display', 'is_active', 'is_verified', 'is_staff',
+            'created_at', 'last_login', 'voter_info', 'candidate_info', 'device_count'
+        ]
+        read_only_fields = ['id', 'created_at', 'last_login']
+
+    def get_full_name(self, obj):
+        name = f"{obj.first_name} {obj.last_name}".strip()
+        return name if name else obj.phone
+
+    def get_voter_info(self, obj):
+        if hasattr(obj, 'voter_profile') and obj.voter_profile:
+            vp = obj.voter_profile
+            voted_posts = []
+            if vp.has_voted_senateur: voted_posts.append('SENATEUR')
+            if vp.has_voted_depute: voted_posts.append('DEPUTE')
+            if vp.has_voted_maire: voted_posts.append('MAIRE')
+            if vp.has_voted_casec: voted_posts.append('CASEC')
+            if vp.has_voted_delegue: voted_posts.append('DELEGUE_VILLE')
+            return {
+                'commune': vp.commune,
+                'commune_display': vp.get_commune_display(),
+                'commune_locked': vp.commune_locked,
+                'has_voted_any': len(voted_posts) > 0,
+                'voted_posts': voted_posts,
+                'voted_count': len(voted_posts),
+            }
+        return None
+
+    def get_candidate_info(self, obj):
+        if hasattr(obj, 'candidate_profile') and obj.candidate_profile:
+            cp = obj.candidate_profile
+            return {
+                'id': str(cp.id),
+                'post': cp.post,
+                'post_display': cp.get_post_display(),
+                'commune': cp.commune,
+                'commune_display': cp.get_commune_display(),
+                'status': cp.status,
+                'status_display': cp.get_status_display(),
+                'slogan': cp.slogan,
+                'photo': cp.photo.url if cp.photo else None,
+            }
+        return None
+
+    def get_device_count(self, obj):
+        return DeviceRegistration.objects.filter(user=obj).count()
+
+
+class AdminUserResetPasswordSerializer(serializers.Serializer):
+    """
+    Serializer pou Sipè Admin chanje modpas yon itilizatè dirèkteman.
+    """
+    new_password = serializers.CharField(min_length=6, write_only=True, required=True)
+
+    def validate_new_password(self, value):
+        if len(value.strip()) < 6:
+            raise serializers.ValidationError("Modpas la dwe gen omwen 6 karaktè.")
+        return value.strip()
+
+

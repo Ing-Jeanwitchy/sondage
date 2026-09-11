@@ -16,6 +16,10 @@ from .views import (
     AdminTeamListView,
     AdminTeamCreateView,
     AdminTeamDeleteView,
+    AdminUserListView,
+    AdminUserToggleActiveView,
+    AdminUserResetPasswordView,
+    AdminUserDeleteView,
     CandidateDashboardView,
     CheckDeviceRegistrationView,
     VoterDashboardView
@@ -38,7 +42,12 @@ urlpatterns = [
     path('admin/team/', AdminTeamListView.as_view(), name='admin-team-list'),
     path('admin/team/create/', AdminTeamCreateView.as_view(), name='admin-team-create'),
     path('admin/team/<uuid:user_id>/', AdminTeamDeleteView.as_view(), name='admin-team-delete'),
+    path('admin/users/', AdminUserListView.as_view(), name='admin-users-list'),
+    path('admin/users/<uuid:user_id>/toggle-active/', AdminUserToggleActiveView.as_view(), name='admin-users-toggle-active'),
+    path('admin/users/<uuid:user_id>/reset-password/', AdminUserResetPasswordView.as_view(), name='admin-users-reset-password'),
+    path('admin/users/<uuid:user_id>/delete/', AdminUserDeleteView.as_view(), name='admin-users-delete'),
     path('admin/survey-config/', AdminSurveyConfigView.as_view(), name='admin-survey-config'),
     path('admin/stats/', AdminDashboardStatsView.as_view(), name='admin-stats'),
     path('admin/purge-test-data/', AdminPurgeTestDataView.as_view(), name='admin-purge-test-data'),
 ]
+

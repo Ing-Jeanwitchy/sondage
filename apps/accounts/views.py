@@ -14,7 +14,9 @@ from .serializers import (
     UserDetailSerializer,
     AdminCandidateDirectCreateSerializer,
     TeamMemberSerializer,
-    TeamMemberCreateSerializer
+    TeamMemberCreateSerializer,
+    AdminUserDetailSerializer,
+    AdminUserResetPasswordSerializer
 )
 from .permissions import (
     IsStaffRole,
@@ -688,6 +690,176 @@ class AdminTeamDeleteView(APIView):
         user_to_delete.delete()
         return Response({
             "message": f"Kont kolaboratè {full_name} efase avèk siksè nan sistèm nan."
+        }, status=status.HTTP_200_OK)
+
+
+class AdminUserListView(APIView):
+    """
+    Endpoint pou Sipè Admin konsilte, chèche epi filtre tout itilizatè sistèm nan (Elektè, Kandida, Ekip).
+    """
+    permission_classes = [IsAdminRole]
+
+    def get(self, request, *args, **kwargs):
+        role_filter = request.query_params.get('role', 'ALL').upper()
+        status_filter = request.query_params.get('status', 'ALL').upper()
+        commune_filter = request.query_params.get('commune', '').strip()
+        search_query = request.query_params.get('q', '').strip()
+
+        qs = User.objects.select_related('voter_profile', 'candidate_profile').all().order_by('-created_at')
+
+        # Stat globales
+        total_users = qs.count()
+        voters_count = qs.filter(role=UserRole.VOTER).count()
+        candidates_count = qs.filter(role=UserRole.CANDIDATE).count()
+        staff_roles = [UserRole.ADMIN, UserRole.MODERATOR, UserRole.OPERATOR, UserRole.COMMUNICATOR]
+        staff_count = qs.filter(role__in=staff_roles).count()
+        active_count = qs.filter(is_active=True).count()
+        inactive_count = qs.filter(is_active=False).count()
+
+        from elections.models import Vote
+        voters_voted_count = Vote.objects.values('voter').distinct().count()
+
+        # Filtre par rôle
+        if role_filter == 'VOTER':
+            qs = qs.filter(role=UserRole.VOTER)
+        elif role_filter == 'CANDIDATE':
+            qs = qs.filter(role=UserRole.CANDIDATE)
+        elif role_filter == 'STAFF':
+            qs = qs.filter(role__in=staff_roles)
+        elif role_filter in [UserRole.ADMIN, UserRole.MODERATOR, UserRole.OPERATOR, UserRole.COMMUNICATOR]:
+            qs = qs.filter(role=role_filter)
+
+        # Filtre par statut actif/inactif
+        if status_filter == 'ACTIVE':
+            qs = qs.filter(is_active=True)
+        elif status_filter == 'INACTIVE':
+            qs = qs.filter(is_active=False)
+
+        # Filtre par commune
+        if commune_filter:
+            qs = qs.filter(
+                Q(voter_profile__commune=commune_filter) |
+                Q(candidate_profile__commune=commune_filter)
+            )
+
+        # Recherche textuelle
+        if search_query:
+            qs = qs.filter(
+                Q(phone__icontains=search_query) |
+                Q(first_name__icontains=search_query) |
+                Q(last_name__icontains=search_query) |
+                Q(email__icontains=search_query) |
+                Q(voter_profile__commune__icontains=search_query) |
+                Q(candidate_profile__commune__icontains=search_query)
+            )
+
+        serializer = AdminUserDetailSerializer(qs, many=True)
+        return Response({
+            "users": serializer.data,
+            "counts": {
+                "total": total_users,
+                "voters": voters_count,
+                "voters_voted": voters_voted_count,
+                "candidates": candidates_count,
+                "staff": staff_count,
+                "active": active_count,
+                "inactive": inactive_count,
+            }
+        }, status=status.HTTP_200_OK)
+
+
+class AdminUserToggleActiveView(APIView):
+    """
+    Endpoint pou Sipè Admin bloke (dezaktive) oswa debloke (aktive) yon kont itilizatè.
+    Yon kont bloke pa ka konekte ni vote nan okenn isolwa.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, user_id=None, *args, **kwargs):
+        target_id = user_id or request.data.get('user_id')
+        if not target_id:
+            return Response({"error": "ID itilizatè a obligatwa."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if str(request.user.id) == str(target_id):
+            return Response({"error": "Ou pa ka bloke pwòp kont pa w."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_user = User.objects.get(id=target_id)
+        except User.DoesNotExist:
+            return Response({"error": "Itilizatè sa a pa egziste nan sistèm nan."}, status=status.HTTP_404_NOT_FOUND)
+
+        if target_user.phone == '+50930000000':
+            return Response({"error": "Kont Sipè Administratè Prensipal la pa ka bloke."}, status=status.HTTP_403_FORBIDDEN)
+
+        target_user.is_active = not target_user.is_active
+        target_user.save()
+
+        status_label = "aktive" if target_user.is_active else "bloke"
+        full_name = f"{target_user.first_name} {target_user.last_name}".strip() or target_user.phone
+
+        return Response({
+            "message": f"Kont {full_name} te {status_label} avèk siksè.",
+            "is_active": target_user.is_active,
+            "user": AdminUserDetailSerializer(target_user).data
+        }, status=status.HTTP_200_OK)
+
+
+class AdminUserResetPasswordView(APIView):
+    """
+    Endpoint pou Sipè Admin chanje modpas yon itilizatè dirèkteman.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, user_id=None, *args, **kwargs):
+        target_id = user_id or request.data.get('user_id')
+        if not target_id:
+            return Response({"error": "ID itilizatè a obligatwa."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_user = User.objects.get(id=target_id)
+        except User.DoesNotExist:
+            return Response({"error": "Itilizatè sa a pa egziste nan sistèm nan."}, status=status.HTTP_404_NOT_FOUND)
+
+        serializer = AdminUserResetPasswordSerializer(data=request.data)
+        if serializer.is_valid():
+            new_pwd = serializer.validated_data['new_password']
+            target_user.set_password(new_pwd)
+            target_user.save()
+            full_name = f"{target_user.first_name} {target_user.last_name}".strip() or target_user.phone
+            return Response({
+                "message": f"Modpas pou kont {full_name} te chanje avèk siksè !"
+            }, status=status.HTTP_200_OK)
+
+        err_msg = serializer.errors.get('new_password', ['Erè nan modpas la'])[0]
+        return Response({"error": err_msg}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminUserDeleteView(APIView):
+    """
+    Endpoint pou Sipè Admin efase yon itilizatè ak tout dosye li nèt.
+    """
+    permission_classes = [IsAdminRole]
+
+    def delete(self, request, user_id=None, *args, **kwargs):
+        target_id = user_id or request.data.get('user_id')
+        if not target_id:
+            return Response({"error": "ID itilizatè a obligatwa."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if str(request.user.id) == str(target_id):
+            return Response({"error": "Ou pa ka efase pwòp kont pa w."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            target_user = User.objects.get(id=target_id)
+        except User.DoesNotExist:
+            return Response({"error": "Itilizatè sa a pa egziste nan sistèm nan."}, status=status.HTTP_404_NOT_FOUND)
+
+        if target_user.phone == '+50930000000':
+            return Response({"error": "Kont Sipè Administratè Prensipal la pa ka efase."}, status=status.HTTP_403_FORBIDDEN)
+
+        full_name = f"{target_user.first_name} {target_user.last_name}".strip() or target_user.phone
+        target_user.delete()
+        return Response({
+            "message": f"Kont {full_name} te efase avèk siksè nan sistèm nan."
         }, status=status.HTTP_200_OK)
 
 

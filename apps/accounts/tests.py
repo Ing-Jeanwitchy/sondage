@@ -7,7 +7,10 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APIClient
 from rest_framework import status as http_status
-from accounts.models import User, UserRole, CandidateProfile, VoterProfile, SurveyConfig, DeviceRegistration, CommuneChoices, ElectivePostChoices
+from accounts.models import (
+    User, UserRole, CandidateProfile, VoterProfile, SurveyConfig,
+    DeviceRegistration, CommuneChoices, ElectivePostChoices, CandidateStatus
+)
 
 
 # ============================================================
@@ -542,4 +545,130 @@ class TestTeamAndRBAC(TestCase):
         # 3. Kominikatè efase l
         del_res = client.delete(f'/api/elections/admin/announcements/{announcement_id}/')
         assert del_res.status_code == http_status.HTTP_200_OK
+
+
+# ============================================================
+# Tests Jesyon Itilizatè yo (Admin User Management)
+# ============================================================
+
+class TestAdminUserManagement(TestCase):
+    """
+    Tests pou nouvo modil jesyon itilizatè yo :
+    - Lis tout itilizatè avèk filtè pa wòl ak rechèch
+    - Bloke / debloke kont (toggle active)
+    - Pwoteksyon Sipè Admin kont bloke oswa efasman
+    - Reyinisyalize modpas itilizatè
+    - Efase itilizatè
+    """
+
+    def setUp(self):
+        self.super_admin = User.objects.create_user(
+            username='admin_boss',
+            phone='+50930000000',
+            password='AdminPass123!',
+            role=UserRole.ADMIN,
+            is_staff=True,
+            is_superuser=True
+        )
+        self.voter = User.objects.create_user(
+            username='voter_test',
+            phone='+50937112233',
+            password='VoterPass123!',
+            first_name='Jean',
+            last_name='Baptiste',
+            role=UserRole.VOTER
+        )
+        VoterProfile.objects.create(
+            user=self.voter,
+            commune=CommuneChoices.PORT_DE_PAIX
+        )
+        self.cand_user = User.objects.create_user(
+            username='cand_test',
+            phone='+50938112233',
+            password='CandPass123!',
+            first_name='Marie',
+            last_name='Clair',
+            role=UserRole.CANDIDATE
+        )
+        CandidateProfile.objects.create(
+            user=self.cand_user,
+            first_name='Marie',
+            last_name='Clair',
+            post=ElectivePostChoices.SENATEUR,
+            commune=CommuneChoices.PORT_DE_PAIX,
+            slogan='Pwogrè pou Nòdwès',
+            biography='Enjenyè',
+            platform_priorities='Edikasyon',
+            status=CandidateStatus.APPROVED
+        )
+
+    def test_admin_can_list_users_with_counts(self):
+        """Sipè admin ka jwenn lis tout itilizatè ak statistik."""
+        client = APIClient()
+        client.force_authenticate(user=self.super_admin)
+        res = client.get('/api/admin/users/')
+        assert res.status_code == http_status.HTTP_200_OK
+        assert 'users' in res.data
+        assert 'counts' in res.data
+        assert res.data['counts']['total'] >= 3
+        assert res.data['counts']['voters'] >= 1
+        assert res.data['counts']['candidates'] >= 1
+
+    def test_admin_can_filter_and_search_users(self):
+        """Admin ka filtre itilizatè pa wòl ak rechèch tèks."""
+        client = APIClient()
+        client.force_authenticate(user=self.super_admin)
+        # Filtre pa VOTER
+        res_voter = client.get('/api/admin/users/?role=VOTER')
+        assert res_voter.status_code == http_status.HTTP_200_OK
+        assert all(u['role'] == 'VOTER' for u in res_voter.data['users'])
+
+        # Rechèch Jean
+        res_search = client.get('/api/admin/users/?q=Jean')
+        assert res_search.status_code == http_status.HTTP_200_OK
+        assert any('Jean' in u['full_name'] for u in res_search.data['users'])
+
+    def test_admin_can_toggle_user_active_status(self):
+        """Admin ka bloke oswa debloke yon kont."""
+        client = APIClient()
+        client.force_authenticate(user=self.super_admin)
+
+        # 1. Bloke
+        res = client.post(f'/api/admin/users/{self.voter.id}/toggle-active/')
+        assert res.status_code == http_status.HTTP_200_OK
+        assert res.data['is_active'] is False
+        self.voter.refresh_from_db()
+        assert self.voter.is_active is False
+
+        # 2. Debloke
+        res2 = client.post(f'/api/admin/users/{self.voter.id}/toggle-active/')
+        assert res2.status_code == http_status.HTTP_200_OK
+        assert res2.data['is_active'] is True
+
+    def test_super_admin_cannot_be_blocked(self):
+        """Pwoteksyon : Sipè Admin prensipal la pa ka bloke."""
+        client = APIClient()
+        client.force_authenticate(user=self.super_admin)
+        res = client.post(f'/api/admin/users/{self.super_admin.id}/toggle-active/')
+        assert res.status_code in [http_status.HTTP_400_BAD_REQUEST, http_status.HTTP_403_FORBIDDEN]
+
+    def test_admin_can_reset_user_password(self):
+        """Admin ka chanje modpas yon itilizatè."""
+        client = APIClient()
+        client.force_authenticate(user=self.super_admin)
+        res = client.post(f'/api/admin/users/{self.voter.id}/reset-password/', {
+            'new_password': 'NewSecurePassword123!'
+        }, format='json')
+        assert res.status_code == http_status.HTTP_200_OK
+        self.voter.refresh_from_db()
+        assert self.voter.check_password('NewSecurePassword123!')
+
+    def test_admin_can_delete_user(self):
+        """Admin ka efase yon kont itilizatè."""
+        client = APIClient()
+        client.force_authenticate(user=self.super_admin)
+        res = client.delete(f'/api/admin/users/{self.voter.id}/delete/')
+        assert res.status_code == http_status.HTTP_200_OK
+        assert not User.objects.filter(id=self.voter.id).exists()
+
 
