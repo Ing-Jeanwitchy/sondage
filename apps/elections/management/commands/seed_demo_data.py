@@ -212,7 +212,65 @@ class Command(BaseCommand):
                     "status": CandidateStatus.APPROVED
                 },
 
-                # --- DOSYE AN ATANT (Pou tes moderation Admin) ---
+                # --- CASEC / ASEC ---
+                {
+                    "first_name": "Jean-Baptiste", "last_name": "Altenor",
+                    "post": ElectivePostChoices.CASEC, "commune": CommuneChoices.PORT_DE_PAIX,
+                    "section_or_city": "1ere Section Baudin",
+                    "slogan": "Devlopman Riral ak Sekirite pou Baudin",
+                    "biography": "Agrikiltè ak prezidan asosyasyon kiltivatè seksyon Baudin.",
+                    "platform_priorities": "1. Reparasyon wout tè pou machin ka monte\n2. Kaptaj sous dlo pou irigasyon ak bwè\n3. Sant sante kominotè pou seksyon an",
+                    "status": CandidateStatus.APPROVED
+                },
+                {
+                    "first_name": "Pierre-Richard", "last_name": "Noel",
+                    "post": ElectivePostChoices.CASEC, "commune": CommuneChoices.PORT_DE_PAIX,
+                    "section_or_city": "2eme Section La Pointe",
+                    "slogan": "Lapwent Ini pou Pwogrè",
+                    "biography": "Lidè kominotè ki angaje nan defans anviwònman ak lapèch nan La Pointe.",
+                    "platform_priorities": "1. Pwoteksyon zòn kòt La Pointe\n2. Elektrisite solè pou ti mache lokal la\n3. Ankadreman pou jèn pechè ak kiltivatè",
+                    "status": CandidateStatus.APPROVED
+                },
+                {
+                    "first_name": "Jude", "last_name": "Saint-Hilaire",
+                    "post": ElectivePostChoices.CASEC, "commune": CommuneChoices.SAINT_LOUIS_DU_NORD,
+                    "section_or_city": "1ere Section Rivière des Barres",
+                    "slogan": "Rivière des Barres Pi Djanm",
+                    "biography": "Ansyen pwofesè lekòl ak agwonòm kominotè nan Sen Lwi.",
+                    "platform_priorities": "1. Ranfòse lekòl nasyonal riral yo\n2. Ti pon bwa ranplase pa pon beton\n3. Kredi agrikòl pou fanm kiltivatris",
+                    "status": CandidateStatus.APPROVED
+                },
+
+                # --- DELEGUE DE VILLE ---
+                {
+                    "first_name": "Wilner", "last_name": "Bellevue",
+                    "post": ElectivePostChoices.DELEGUE_VILLE, "commune": CommuneChoices.PORT_DE_PAIX,
+                    "section_or_city": "Centre-Ville & Haut-de-Paix",
+                    "slogan": "Lari Pwòp, Sekirite ak Viv Ansanm nan Podpè",
+                    "biography": "Aktivis kominotè ak manm komite katye Sant Vil Pòdpè depi 15 lane.",
+                    "platform_priorities": "1. Netwayaj kanalizasyon ak jesyon fatra nan ri prensipal yo\n2. Ranfòse sekirite katye a nan aswè\n3. Sipò pou machann bò lari ak ti komès",
+                    "status": CandidateStatus.APPROVED
+                },
+                {
+                    "first_name": "Ketsia", "last_name": "Joseph",
+                    "post": ElectivePostChoices.DELEGUE_VILLE, "commune": CommuneChoices.PORT_DE_PAIX,
+                    "section_or_city": "Bas-de-Paix / Bord-de-Mer",
+                    "slogan": "Bò Lanmè Podpè Merite Vivab ak Klere",
+                    "biography": "Jèn antreprenèz sosyal ki dirije plizyè inisyativ anviwònman bò lanmè Pòdpè.",
+                    "platform_priorities": "1. Pwoteksyon rivaj la kont ewozyon\n2. Eklere ri ak panno solè entelijan\n3. Espas espòtif ak kiltirèl pou jèn yo",
+                    "status": CandidateStatus.APPROVED
+                },
+                {
+                    "first_name": "Fabienne", "last_name": "Desrameaux",
+                    "post": ElectivePostChoices.DELEGUE_VILLE, "commune": CommuneChoices.SAINT_LOUIS_DU_NORD,
+                    "section_or_city": "Centre-Ville Sen Lwi",
+                    "slogan": "Sen Lwi Pwòp e Atire",
+                    "biography": "Edikatris ak animatris radyo kominotè nan Sen Lwi dinò.",
+                    "platform_priorities": "1. Òganizasyon mache santral la\n2. Pwogram sansibilizasyon sou ijyèn piblik\n3. Rekreyasyon ak aktivite pou timoun",
+                    "status": CandidateStatus.APPROVED
+                },
+
+                # --- DOSYE AN ATANT (Pou tès moderasyon Admin) ---
                 {
                     "first_name": "Gilles", "last_name": "Paul",
                     "post": ElectivePostChoices.MAIRE, "commune": CommuneChoices.CHANSOLME,

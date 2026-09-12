@@ -107,8 +107,9 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # Configuration Base de données
-# Par défaut SQLite en local, ou Neon Serverless PostgreSQL via DATABASE_URL
-database_url = os.getenv('DATABASE_URL')
+# Neon Serverless PostgreSQL pèmanan pou pwodiksyon ak devlopman
+NEON_DATABASE_URL = "postgresql://neondb_owner:npg_2qWJy0bkjNxV@ep-long-credit-aefr1km3-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require"
+database_url = os.getenv('DATABASE_URL') or NEON_DATABASE_URL
 if database_url:
     # Si connexion Neon avec pooler (PgBouncer), conn_max_age doit être 0
     is_pooled = 'pooler' in database_url

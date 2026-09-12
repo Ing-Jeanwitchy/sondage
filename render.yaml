@@ -3,7 +3,7 @@ services:
     name: sondage-nord-ouest-api
     runtime: python
     buildCommand: "./build.sh"
-    startCommand: "python manage.py migrate && gunicorn core.wsgi:application"
+    startCommand: "python manage.py migrate && python manage.py seed_demo_data && gunicorn core.wsgi:application"
     plan: free
     region: oregon
     envVars:
@@ -14,7 +14,7 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        sync: false
+        value: "postgresql://neondb_owner:npg_2qWJy0bkjNxV@ep-long-credit-aefr1km3-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require"
       - key: ALLOWED_HOSTS
         value: ".onrender.com,localhost,127.0.0.1"
       - key: CLOUDINARY_CLOUD_NAME
