@@ -55,9 +55,10 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
             'post', 'post_display', 'commune', 'commune_display',
             'section_or_city', 'photo', 'slogan', 'biography',
             'platform_priorities', 'status', 'status_display',
-            'rejection_reason', 'created_at'
+            'rejection_reason', 'withdrawal_requested', 'withdrawal_reason',
+            'withdrawal_requested_at', 'created_at'
         ]
-        read_only_fields = ['id', 'status', 'created_at']
+        read_only_fields = ['id', 'status', 'withdrawal_requested', 'withdrawal_reason', 'withdrawal_requested_at', 'created_at']
 
 
 class CandidateRegistrationSerializer(serializers.Serializer):

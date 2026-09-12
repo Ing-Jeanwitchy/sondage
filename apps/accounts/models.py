@@ -151,6 +151,20 @@ class CandidateProfile(models.Model):
         blank=True,
         verbose_name="Date de validation"
     )
+    withdrawal_requested = models.BooleanField(
+        default=False,
+        verbose_name="Demann retrè soumèt"
+    )
+    withdrawal_reason = models.TextField(
+        blank=True,
+        default='',
+        verbose_name="Rezon retrè kandidati a"
+    )
+    withdrawal_requested_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Dat demand retrè a"
+    )
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -351,7 +351,9 @@ class AdminCandidateListView(APIView):
         status_filter = request.query_params.get('status', 'ALL')
         queryset = CandidateProfile.objects.all().order_by('-created_at')
 
-        if status_filter and status_filter != 'ALL':
+        if status_filter == 'WITHDRAWAL':
+            queryset = queryset.filter(withdrawal_requested=True)
+        elif status_filter and status_filter != 'ALL':
             queryset = queryset.filter(status=status_filter)
 
         serializer = CandidateProfileSerializer(queryset, many=True)
@@ -362,6 +364,7 @@ class AdminCandidateListView(APIView):
             "pending": CandidateProfile.objects.filter(status=CandidateStatus.PENDING).count(),
             "approved": CandidateProfile.objects.filter(status=CandidateStatus.APPROVED).count(),
             "rejected": CandidateProfile.objects.filter(status=CandidateStatus.REJECTED).count(),
+            "withdrawals": CandidateProfile.objects.filter(withdrawal_requested=True).count(),
         }
 
         return Response({
@@ -394,7 +397,8 @@ class AdminCandidateCreateView(APIView):
 
 class AdminCandidateModerateView(APIView):
     """
-    Endpoint pou administratè ak moderatè apwouve, rejte oswa efase yon dosye kandidati.
+    Endpoint pou administratè ak moderatè apwouve, rejte oswa efase yon dosye kandidati,
+    oswa apwouve / rejte yon demann retrè kandidati.
     """
     permission_classes = [CanModerateCandidates]
 
@@ -404,7 +408,7 @@ class AdminCandidateModerateView(APIView):
         except CandidateProfile.DoesNotExist:
             return Response({"error": "Kandida sa a pa egziste nan sistèm nan."}, status=status.HTTP_404_NOT_FOUND)
 
-        action = request.data.get('action') # 'approve' | 'reject' | 'delete'
+        action = request.data.get('action') # 'approve' | 'reject' | 'delete' | 'approve_withdrawal' | 'reject_withdrawal'
         reason = request.data.get('reason', '')
 
         if action == 'approve':
@@ -426,7 +430,7 @@ class AdminCandidateModerateView(APIView):
                 "candidate": CandidateProfileSerializer(candidate).data
             }, status=status.HTTP_200_OK)
 
-        elif action == 'delete':
+        elif action == 'approve_withdrawal' or action == 'delete':
             full_name = f"{candidate.first_name} {candidate.last_name}"
             user = candidate.user
             if candidate.photo:
@@ -438,11 +442,20 @@ class AdminCandidateModerateView(APIView):
             if user and user.role == UserRole.CANDIDATE:
                 user.delete()
             return Response({
-                "message": f"Kandida {full_name} efase nèt nan sistèm nan avèk siksè.",
+                "message": f"Demann retrè pou {full_name} apwouve epi dosye a efase nèt nan sistèm nan avèk siksè.",
                 "deleted_id": str(candidate_id)
             }, status=status.HTTP_200_OK)
 
-        return Response({"error": "Aksyon sa a pa valid. Sèl aksyon ki otorize se 'approve', 'reject' oswa 'delete'."}, status=status.HTTP_400_BAD_REQUEST)
+        elif action == 'reject_withdrawal':
+            candidate.withdrawal_requested = False
+            candidate.withdrawal_reason = ''
+            candidate.save()
+            return Response({
+                "message": f"Demann retrè pou {candidate.first_name} {candidate.last_name} rejte. Kandida a rete aktif nan sondaj la.",
+                "candidate": CandidateProfileSerializer(candidate).data
+            }, status=status.HTTP_200_OK)
+
+        return Response({"error": "Aksyon sa a pa valid. Aksyon otorize : 'approve', 'reject', 'approve_withdrawal', 'reject_withdrawal', oswa 'delete'."}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, candidate_id, *args, **kwargs):
         try:
@@ -1035,21 +1048,40 @@ class CandidateDashboardView(APIView):
         }, status=status.HTTP_200_OK)
 
     def delete(self, request, *args, **kwargs):
+        """
+        Kandida a pa ka efase tèt li dirèkteman san rezon.
+        Li soumèt yon demann retrè ak yon rezon obligatwa, epi yon administratè ap valide l.
+        """
         try:
             profile = request.user.candidate_profile
         except CandidateProfile.DoesNotExist:
             return Response({"error": "Profil kandida pa jwenn pou kont sa a."}, status=status.HTTP_404_NOT_FOUND)
 
-        user = request.user
-        if profile.photo:
-            try:
-                profile.photo.delete(save=False)
-            except Exception:
-                pass
-        profile.delete()
-        user.delete()
+        cancel = request.data.get('cancel', False)
+        if cancel:
+            profile.withdrawal_requested = False
+            profile.withdrawal_reason = ''
+            profile.withdrawal_requested_at = None
+            profile.save()
+            return Response({
+                "message": "Demann retrè a anile avèk siksè. Kandidati ou toujou aktif nan sondaj la.",
+                "profile": CandidateProfileSerializer(profile).data
+            }, status=status.HTTP_200_OK)
+
+        reason = (request.data.get('reason') or '').strip()
+        if not reason:
+            return Response({
+                "error": "Tanpri bay yon rezon pou retrè kandidati w la. Yon administratè dwe valide demann nan anvan efasman dosye a."
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        profile.withdrawal_requested = True
+        profile.withdrawal_reason = reason
+        profile.withdrawal_requested_at = timezone.now()
+        profile.save()
+
         return Response({
-            "message": "Kandidati ou ak kont ou efase nèt nan sistèm nan avèk siksè."
+            "message": "Demann retrè ou an soumèt avèk siksè. Yon administratè ap analize rezon an epi valide efasman dosye a.",
+            "profile": CandidateProfileSerializer(profile).data
         }, status=status.HTTP_200_OK)
 
 
