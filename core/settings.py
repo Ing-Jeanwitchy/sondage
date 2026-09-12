@@ -107,14 +107,29 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # Configuration Base de données
-# Par défaut SQLite en local, basculable en PostgreSQL sur Render via DATABASE_URL
-DATABASES = {
-    'default': dj_database_url.config(
-        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
+# Par défaut SQLite en local, ou Neon Serverless PostgreSQL via DATABASE_URL
+database_url = os.getenv('DATABASE_URL')
+if database_url:
+    # Si connexion Neon avec pooler (PgBouncer), conn_max_age doit être 0
+    is_pooled = 'pooler' in database_url
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=database_url,
+            conn_max_age=0 if is_pooled else int(os.getenv('CONN_MAX_AGE', 600)),
+            conn_health_checks=True,
+        )
+    }
+    # Neon requiert SSL obligatoire
+    if 'neon.tech' in database_url or 'sslmode' in database_url:
+        DATABASES['default'].setdefault('OPTIONS', {})
+        DATABASES['default']['OPTIONS']['sslmode'] = 'require'
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Validation des mots de passe
 AUTH_PASSWORD_VALIDATORS = [
