@@ -6,7 +6,9 @@ from .views import (
     SurveyResultsView, 
     AdminVoteAuditView,
     PublicAnnouncementListView,
-    AdminAnnouncementView
+    AdminAnnouncementView,
+    DonationCreateView,
+    AdminDonationListView
 )
 from .export_views import (
     AdminExportResultsCSVView,
@@ -20,6 +22,8 @@ urlpatterns = [
     path('my-votes/', MyVotesReceiptView.as_view(), name='my-votes'),
     path('results/', SurveyResultsView.as_view(), name='survey-results'),
     path('announcements/', PublicAnnouncementListView.as_view(), name='public-announcements'),
+    path('donations/', DonationCreateView.as_view(), name='donation-create'),
+    path('admin/donations/', AdminDonationListView.as_view(), name='admin-donations'),
     path('admin/announcements/', AdminAnnouncementView.as_view(), name='admin-announcements'),
     path('admin/announcements/<uuid:pk>/', AdminAnnouncementView.as_view(), name='admin-announcements-detail'),
     path('admin/audit-votes/', AdminVoteAuditView.as_view(), name='admin-audit-votes'),

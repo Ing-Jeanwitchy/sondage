@@ -420,3 +420,42 @@ class AdminAnnouncementView(APIView):
         except PublicAnnouncement.DoesNotExist:
             return Response({"error": "Kominike sa a pa egziste."}, status=status.HTTP_404_NOT_FOUND)
 
+
+class DonationCreateView(APIView):
+    """
+    Endpoint piblik pou resevwa donasyon ak sipò sitwayen.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        from .models import Donation
+        from .serializers import DonationSerializer
+        
+        serializer = DonationSerializer(data=request.data)
+        if serializer.is_valid():
+            donation = serializer.save()
+            return Response({
+                "message": "Donasyon w la anrejistre avèk siksè !",
+                "receipt_code": f"DON-{str(donation.id)[:8].upper()}",
+                "donation": serializer.data
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class AdminDonationListView(APIView):
+    """
+    Endpoint rezève pou Admin konsilte tout donasyon sitwayen yo.
+    """
+    permission_classes = [permissions.IsAuthenticated, IsAdminRole]
+
+    def get(self, request, *args, **kwargs):
+        from .models import Donation
+        from .serializers import DonationSerializer
+
+        donations = Donation.objects.all().order_by('-created_at')
+        serializer = DonationSerializer(donations, many=True)
+        return Response({
+            "total_count": donations.count(),
+            "donations": serializer.data
+        }, status=status.HTTP_200_OK)
+

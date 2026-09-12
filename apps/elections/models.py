@@ -135,3 +135,26 @@ class PublicAnnouncement(models.Model):
 
     def __str__(self):
         return f"[{self.get_category_display()}] {self.title}"
+
+
+class Donation(models.Model):
+    """
+    Modèl pou anrejistre donasyon ak sipò sitwayen pou platfòm nan.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    donor_name = models.CharField(max_length=150, verbose_name="Non Donatè")
+    donor_contact = models.CharField(max_length=100, verbose_name="Telefòn oswa Imèl")
+    amount = models.DecimalField(max_digits=10, decimal_places=2, verbose_name="Montan Don")
+    currency = models.CharField(max_length=10, default="HTG", verbose_name="Deviz (HTG/USD)")
+    payment_method = models.CharField(max_length=50, verbose_name="Metòd Peman")
+    transaction_reference = models.CharField(max_length=120, blank=True, default='', verbose_name="Kòd Referans / Tranzaksyon")
+    message = models.TextField(blank=True, default='', verbose_name="Mesaj Ankourajman")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Dat Kreyasyon")
+
+    class Meta:
+        verbose_name = "Donasyon Sitwayen"
+        verbose_name_plural = "Donasyon Sitwayen yo"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.donor_name} - {self.amount} {self.currency} ({self.payment_method})"

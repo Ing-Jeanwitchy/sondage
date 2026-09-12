@@ -72,3 +72,17 @@ class PublicAnnouncementSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
 
 
+class DonationSerializer(serializers.ModelSerializer):
+    """
+    Serializer pou fòmilè donasyon sitwayen an.
+    """
+    class Meta:
+        from .models import Donation
+        model = Donation
+        fields = [
+            'id', 'donor_name', 'donor_contact', 'amount', 'currency',
+            'payment_method', 'transaction_reference', 'message', 'created_at'
+        ]
+        read_only_fields = ['id', 'created_at']
+
+
