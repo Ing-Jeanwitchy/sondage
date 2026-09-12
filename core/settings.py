@@ -245,20 +245,18 @@ FIREBASE_DOMAINS = [
     'https://nordoeust.firebaseapp.com',
 ]
 
-if DEBUG:
-    CORS_ALLOW_ALL_ORIGINS = True
-else:
-    CORS_ALLOW_ALL_ORIGINS = False
-    CORS_ALLOWED_ORIGINS = FIREBASE_DOMAINS
-    CORS_ALLOWED_ORIGIN_REGEXES = [
-        r"^https://.*\.web\.app$",
-        r"^https://.*\.firebaseapp.com$",
-        r"^http://localhost:[0-9]+$",
-        r"^http://127\.0\.0\.1:[0-9]+$",
-    ]
-    extra_origins = os.getenv('CORS_ALLOWED_ORIGINS', '')
-    if extra_origins:
-        CORS_ALLOWED_ORIGINS += [o.strip() for o in extra_origins.split(',') if o.strip()]
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = FIREBASE_DOMAINS
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.web\.app$",
+    r"^https://.*\.firebaseapp.com$",
+    r"^http://localhost:[0-9]+$",
+    r"^http://127\.0\.0\.1:[0-9]+$",
+]
+extra_origins = os.getenv('CORS_ALLOWED_ORIGINS', '')
+if extra_origins:
+    CORS_ALLOWED_ORIGINS += [o.strip() for o in extra_origins.split(',') if o.strip()]
+
 
 # Limit telechajman fichye (25 MB pou pèmèt foto jiska 20 Mo)
 DATA_UPLOAD_MAX_MEMORY_SIZE = 26214400  # 25 MB
