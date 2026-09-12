@@ -180,6 +180,17 @@ class SurveyConfigView(APIView):
                 "seconds_remaining": seconds_remaining,
                 "is_expired": is_expired,
                 "is_voting_open": config.is_voting_open,
+                "donation_config": {
+                    "moncash_number": getattr(config, 'donation_moncash_number', '+509 37 00 0000'),
+                    "moncash_name": getattr(config, 'donation_moncash_name', 'Kowòdinasyon Sondaj Nòdwès'),
+                    "natcash_number": getattr(config, 'donation_natcash_number', '+509 40 00 0000'),
+                    "natcash_name": getattr(config, 'donation_natcash_name', 'Kowòdinasyon Sondaj Nòdwès'),
+                    "zelle_info": getattr(config, 'donation_zelle_info', 'sondagenordouest@gmail.com'),
+                    "zelle_name": getattr(config, 'donation_zelle_name', 'Nord-Ouest Citizen Civic Initiative'),
+                    "cashapp_tag": getattr(config, 'donation_cashapp_tag', '$SondageNordOuest'),
+                    "bank_info": getattr(config, 'donation_bank_info', 'Unibank HTG: 123-4567-890123 | Sogebank USD: 987-6543-210987'),
+                    "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès')
+                }
             })
         except Exception as e:
             # Fallback sekirite si tab yo poko fini migre
@@ -469,6 +480,17 @@ class AdminSurveyConfigView(APIView):
             "registration_deadline": config.registration_deadline.isoformat(),
             "is_voting_open": config.is_voting_open,
             "is_expired": config.is_expired(),
+            "donation_config": {
+                "moncash_number": getattr(config, 'donation_moncash_number', '+509 37 00 0000'),
+                "moncash_name": getattr(config, 'donation_moncash_name', 'Kowòdinasyon Sondaj Nòdwès'),
+                "natcash_number": getattr(config, 'donation_natcash_number', '+509 40 00 0000'),
+                "natcash_name": getattr(config, 'donation_natcash_name', 'Kowòdinasyon Sondaj Nòdwès'),
+                "zelle_info": getattr(config, 'donation_zelle_info', 'sondagenordouest@gmail.com'),
+                "zelle_name": getattr(config, 'donation_zelle_name', 'Nord-Ouest Citizen Civic Initiative'),
+                "cashapp_tag": getattr(config, 'donation_cashapp_tag', '$SondageNordOuest'),
+                "bank_info": getattr(config, 'donation_bank_info', 'Unibank HTG: 123-4567-890123 | Sogebank USD: 987-6543-210987'),
+                "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès')
+            }
         }, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
@@ -504,14 +526,48 @@ class AdminSurveyConfigView(APIView):
             if new_deadline:
                 config.registration_deadline = new_deadline
 
+        # Mizajou Konfigirasyon Donasyon Sitwayen (Super Admin sèlman)
+        donation_fields = [
+            'donation_moncash_number', 'donation_moncash_name',
+            'donation_natcash_number', 'donation_natcash_name',
+            'donation_zelle_info', 'donation_zelle_name',
+            'donation_cashapp_tag', 'donation_bank_info', 'donation_bank_name'
+        ]
+        for field in donation_fields:
+            if field in request.data:
+                setattr(config, field, str(request.data[field]).strip())
+
+        if 'donation_config' in request.data and isinstance(request.data['donation_config'], dict):
+            dc = request.data['donation_config']
+            if 'moncash_number' in dc: config.donation_moncash_number = str(dc['moncash_number']).strip()
+            if 'moncash_name' in dc: config.donation_moncash_name = str(dc['moncash_name']).strip()
+            if 'natcash_number' in dc: config.donation_natcash_number = str(dc['natcash_number']).strip()
+            if 'natcash_name' in dc: config.donation_natcash_name = str(dc['natcash_name']).strip()
+            if 'zelle_info' in dc: config.donation_zelle_info = str(dc['zelle_info']).strip()
+            if 'zelle_name' in dc: config.donation_zelle_name = str(dc['zelle_name']).strip()
+            if 'cashapp_tag' in dc: config.donation_cashapp_tag = str(dc['cashapp_tag']).strip()
+            if 'bank_info' in dc: config.donation_bank_info = str(dc['bank_info']).strip()
+            if 'bank_name' in dc: config.donation_bank_name = str(dc['bank_name']).strip()
+
         config.save()
         return Response({
-            "message": "Paramèt kalandriye sondaj la mete a jou avèk siksè !",
+            "message": "Paramèt sondaj la ak enfòmasyon donasyon yo mete a jou avèk siksè !",
             "config": {
                 "is_registration_open": config.is_registration_open,
                 "registration_deadline": config.registration_deadline.isoformat(),
                 "is_voting_open": config.is_voting_open,
                 "is_expired": config.is_expired(),
+                "donation_config": {
+                    "moncash_number": getattr(config, 'donation_moncash_number', '+509 37 00 0000'),
+                    "moncash_name": getattr(config, 'donation_moncash_name', 'Kowòdinasyon Sondaj Nòdwès'),
+                    "natcash_number": getattr(config, 'donation_natcash_number', '+509 40 00 0000'),
+                    "natcash_name": getattr(config, 'donation_natcash_name', 'Kowòdinasyon Sondaj Nòdwès'),
+                    "zelle_info": getattr(config, 'donation_zelle_info', 'sondagenordouest@gmail.com'),
+                    "zelle_name": getattr(config, 'donation_zelle_name', 'Nord-Ouest Citizen Civic Initiative'),
+                    "cashapp_tag": getattr(config, 'donation_cashapp_tag', '$SondageNordOuest'),
+                    "bank_info": getattr(config, 'donation_bank_info', 'Unibank HTG: 123-4567-890123 | Sogebank USD: 987-6543-210987'),
+                    "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès')
+                }
             }
         }, status=status.HTTP_200_OK)
 

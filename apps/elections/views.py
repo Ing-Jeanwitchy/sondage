@@ -164,11 +164,16 @@ class CastVoteView(APIView):
                     "error": "Aparèy sa a anrejistre sou kont yon lòt sitwayen. Ou pa ka vote sou aparèy yon lòt moun."
                 }, status=status.HTTP_403_FORBIDDEN)
 
-        # 2. Rekipere komin elektè a
+        # 2. Rekipere komin elektè a (Elektè, Kandida, oswa Manm Ekip/Admin)
         voter_commune = 'PORT_DE_PAIX'
         voter_profile = getattr(user, 'voter_profile', None)
+        candidate_profile = getattr(user, 'candidate_profile', None)
         if voter_profile:
             voter_commune = voter_profile.commune
+        elif candidate_profile:
+            voter_commune = candidate_profile.commune
+        elif serializer.validated_data.get('commune'):
+            voter_commune = serializer.validated_data.get('commune')
 
         # 3. Tcheke si kandida a egziste epi li apwouve
         try:

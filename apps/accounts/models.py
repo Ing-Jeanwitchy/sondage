@@ -225,6 +225,62 @@ class SurveyConfig(models.Model):
         default=False,
         verbose_name="Faz vòt la louvri ?"
     )
+
+    # Konfigirasyon Peman Donasyon Sitwayen (Super Admin jere l)
+    donation_moncash_number = models.CharField(
+        max_length=50, 
+        blank=True, 
+        default='+509 37 00 0000', 
+        verbose_name="Nimewo MonCash"
+    )
+    donation_moncash_name = models.CharField(
+        max_length=150, 
+        blank=True, 
+        default='Kowòdinasyon Sondaj Nòdwès', 
+        verbose_name="Non Mèt Kont MonCash"
+    )
+    donation_natcash_number = models.CharField(
+        max_length=50, 
+        blank=True, 
+        default='+509 40 00 0000', 
+        verbose_name="Nimewo Natcash"
+    )
+    donation_natcash_name = models.CharField(
+        max_length=150, 
+        blank=True, 
+        default='Kowòdinasyon Sondaj Nòdwès', 
+        verbose_name="Non Mèt Kont Natcash"
+    )
+    donation_zelle_info = models.CharField(
+        max_length=150, 
+        blank=True, 
+        default='sondagenordouest@gmail.com', 
+        verbose_name="Imèl / Nimewo Zelle"
+    )
+    donation_zelle_name = models.CharField(
+        max_length=150, 
+        blank=True, 
+        default='Nord-Ouest Citizen Civic Initiative', 
+        verbose_name="Non Mèt Kont Zelle"
+    )
+    donation_cashapp_tag = models.CharField(
+        max_length=100, 
+        blank=True, 
+        default='$SondageNordOuest', 
+        verbose_name="Tag CashApp ($cashtag)"
+    )
+    donation_bank_info = models.TextField(
+        blank=True, 
+        default='Unibank HTG: 123-4567-890123 | Sogebank USD: 987-6543-210987', 
+        verbose_name="Enfòmasyon Kont Labank"
+    )
+    donation_bank_name = models.CharField(
+        max_length=150, 
+        blank=True, 
+        default='Inisyativ Sitwayen Nòdwès', 
+        verbose_name="Non Mèt Kont Labank"
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:

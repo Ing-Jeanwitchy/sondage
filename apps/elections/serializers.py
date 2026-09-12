@@ -29,6 +29,7 @@ class CastVoteSerializer(serializers.Serializer):
     """
     candidate_id = serializers.UUIDField(required=True)
     post = serializers.ChoiceField(choices=ElectivePostChoices.choices, required=True)
+    commune = serializers.ChoiceField(choices=CommuneChoices.choices, required=False, allow_null=True)
     device_fingerprint = serializers.CharField(max_length=128, required=False, allow_blank=True, default='')
 
 
