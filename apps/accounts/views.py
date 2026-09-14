@@ -180,6 +180,7 @@ class SurveyConfigView(APIView):
                 "seconds_remaining": seconds_remaining,
                 "is_expired": is_expired,
                 "is_voting_open": config.is_voting_open,
+                "show_official_publications": getattr(config, 'show_official_publications', True),
                 "donation_config": {
                     "moncash_number": getattr(config, 'donation_moncash_number', '+509 37 00 0000'),
                     "moncash_name": getattr(config, 'donation_moncash_name', 'Kowòdinasyon Sondaj Nòdwès'),
@@ -493,6 +494,7 @@ class AdminSurveyConfigView(APIView):
             "registration_deadline": config.registration_deadline.isoformat(),
             "is_voting_open": config.is_voting_open,
             "is_expired": config.is_expired(),
+            "show_official_publications": getattr(config, 'show_official_publications', True),
             "donation_config": {
                 "moncash_number": getattr(config, 'donation_moncash_number', '+509 37 00 0000'),
                 "moncash_name": getattr(config, 'donation_moncash_name', 'Kowòdinasyon Sondaj Nòdwès'),
@@ -539,6 +541,9 @@ class AdminSurveyConfigView(APIView):
             if new_deadline:
                 config.registration_deadline = new_deadline
 
+        if 'show_official_publications' in request.data:
+            config.show_official_publications = bool(request.data['show_official_publications'])
+
         # Mizajou Konfigirasyon Donasyon Sitwayen (Super Admin sèlman)
         donation_fields = [
             'donation_moncash_number', 'donation_moncash_name',
@@ -570,6 +575,7 @@ class AdminSurveyConfigView(APIView):
                 "registration_deadline": config.registration_deadline.isoformat(),
                 "is_voting_open": config.is_voting_open,
                 "is_expired": config.is_expired(),
+                "show_official_publications": getattr(config, 'show_official_publications', True),
                 "donation_config": {
                     "moncash_number": getattr(config, 'donation_moncash_number', '+509 37 00 0000'),
                     "moncash_name": getattr(config, 'donation_moncash_name', 'Kowòdinasyon Sondaj Nòdwès'),
@@ -582,6 +588,7 @@ class AdminSurveyConfigView(APIView):
                     "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès')
                 }
             }
+
         }, status=status.HTTP_200_OK)
 
 

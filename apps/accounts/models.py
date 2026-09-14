@@ -295,7 +295,13 @@ class SurveyConfig(models.Model):
         verbose_name="Non Mèt Kont Labank"
     )
 
+    show_official_publications = models.BooleanField(
+        default=True,
+        verbose_name="Afiche Seksyon Kominike ak Piblikasyon yo sou Paj Akèy ?"
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
+
 
     class Meta:
         verbose_name = "Konfigirasyon Sondaj la"
