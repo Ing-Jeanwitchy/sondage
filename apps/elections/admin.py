@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Vote
+from .models import Vote, Donation
 
 @admin.register(Vote)
 class VoteAdmin(admin.ModelAdmin):
@@ -19,3 +19,12 @@ class VoteAdmin(admin.ModelAdmin):
     def has_add_permission(self, request):
         # Empêche l'ajout manuel de votes depuis l'interface admin pour préserver l'intégrité
         return False
+
+
+@admin.register(Donation)
+class DonationAdmin(admin.ModelAdmin):
+    list_display = ('donor_name', 'amount', 'currency', 'payment_method', 'transaction_reference', 'donor_contact', 'created_at')
+    list_filter = ('currency', 'payment_method', 'created_at')
+    search_fields = ('donor_name', 'donor_contact', 'transaction_reference', 'message')
+    readonly_fields = ('id', 'created_at')
+

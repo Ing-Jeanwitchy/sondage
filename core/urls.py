@@ -41,11 +41,15 @@ def health_check(request):
     }, status=200)
 
 
+from elections.views import DonationCreateView, AdminDonationListView
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/health/', health_check, name='health-check'),
     path('api/', include('accounts.urls')),
     path('api/elections/', include('elections.urls')),
+    path('api/donations/', DonationCreateView.as_view(), name='api-donations'),
+    path('api/admin/donations/', AdminDonationListView.as_view(), name='api-admin-donations'),
 ]
 
 if settings.DEBUG:

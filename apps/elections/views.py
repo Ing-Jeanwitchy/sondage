@@ -428,9 +428,46 @@ class AdminAnnouncementView(APIView):
 
 class DonationCreateView(APIView):
     """
-    Endpoint piblik pou resevwa donasyon ak sipò sitwayen.
+    Endpoint piblik pou resevwa donasyon ak sipò sitwayen, epi konsilte estatistik an dirèk.
     """
     permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        from .models import Donation
+        from django.db.models import Sum
+        
+        total_count = Donation.objects.count()
+        total_htg = Donation.objects.filter(currency='HTG').aggregate(total=Sum('amount'))['total'] or 0
+        total_usd = Donation.objects.filter(currency='USD').aggregate(total=Sum('amount'))['total'] or 0
+        
+        goal_htg = 150000.0
+        total_htg_equiv = float(total_htg) + (float(total_usd) * 130.0)
+        progress_percent = min(100, round((total_htg_equiv / goal_htg) * 100, 1)) if goal_htg > 0 else 0
+        
+        recent = Donation.objects.all().order_by('-created_at')[:10]
+        recent_list = []
+        for d in recent:
+            name_parts = d.donor_name.strip().split()
+            display_name = f"{name_parts[0]} {name_parts[1][0]}." if len(name_parts) > 1 else d.donor_name
+            recent_list.append({
+                "id": str(d.id)[:8],
+                "donor_name": display_name,
+                "amount": float(d.amount),
+                "currency": d.currency,
+                "payment_method": d.payment_method,
+                "message": d.message,
+                "created_at": d.created_at.strftime("%d/%m/%Y %H:%M")
+            })
+            
+        return Response({
+            "total_count": total_count,
+            "total_htg": float(total_htg),
+            "total_usd": float(total_usd),
+            "total_htg_equivalent": round(total_htg_equiv, 2),
+            "goal_htg": goal_htg,
+            "progress_percent": progress_percent,
+            "recent_donations": recent_list
+        }, status=status.HTTP_200_OK)
 
     def post(self, request, *args, **kwargs):
         from .models import Donation
