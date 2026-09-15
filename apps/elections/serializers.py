@@ -16,7 +16,7 @@ class BallotCandidateSerializer(serializers.ModelSerializer):
             'id', 'name', 'first_name', 'last_name',
             'post', 'post_display', 'commune', 'commune_display',
             'section_or_city', 'photo', 'slogan', 'biography',
-            'platform_priorities'
+            'platform_priorities', 'cartel_name', 'cartel_member2_name', 'cartel_member3_name'
         ]
 
     def get_name(self, obj):

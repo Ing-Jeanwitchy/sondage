@@ -135,6 +135,29 @@ class CandidateProfile(models.Model):
         help_text="Les 3 à 4 axes majeurs de votre programme"
     )
     
+    # Chan Kartèl 3 Moun (sitou pou Mèri / Majistra ak CASEC)
+    cartel_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default='',
+        verbose_name="Non Kartèl la / Bannè Politik",
+        help_text="Egzanp : Kartèl Tèt Ansanm pou Pòdepè"
+    )
+    cartel_member2_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default='',
+        verbose_name="1e Majistra Adjwen (1er Adjoint)",
+        help_text="Non ak Prenon dezyèm manm kartèl la"
+    )
+    cartel_member3_name = models.CharField(
+        max_length=150,
+        blank=True,
+        default='',
+        verbose_name="2e Majistra Adjwen (2ème Adjoint)",
+        help_text="Non ak Prenon twazyèm manm kartèl la"
+    )
+    
     status = models.CharField(
         max_length=20,
         choices=CandidateStatus.choices,

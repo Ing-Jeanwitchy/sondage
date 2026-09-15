@@ -433,6 +433,12 @@ class DonationCreateView(APIView):
     """
     permission_classes = [permissions.AllowAny]
 
+    def get(self, request, *args, **kwargs):
+        """Retounen sèlman kantite donatè — pa janm montan total la."""
+        from .models import Donation
+        count = Donation.objects.count()
+        return Response({"total_count": count}, status=status.HTTP_200_OK)
+
     def post(self, request, *args, **kwargs):
         from .models import Donation
         from .serializers import DonationSerializer

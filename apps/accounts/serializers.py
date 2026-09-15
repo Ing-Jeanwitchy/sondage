@@ -54,7 +54,8 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
             'id', 'phone', 'email', 'first_name', 'last_name',
             'post', 'post_display', 'commune', 'commune_display',
             'section_or_city', 'photo', 'slogan', 'biography',
-            'platform_priorities', 'status', 'status_display',
+            'platform_priorities', 'cartel_name', 'cartel_member2_name', 'cartel_member3_name',
+            'status', 'status_display',
             'rejection_reason', 'withdrawal_requested', 'withdrawal_reason',
             'withdrawal_requested_at', 'created_at'
         ]
@@ -81,6 +82,9 @@ class CandidateRegistrationSerializer(serializers.Serializer):
     slogan = serializers.CharField(max_length=255, required=True)
     biography = serializers.CharField(required=True)
     platform_priorities = serializers.CharField(required=True)
+    cartel_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
+    cartel_member2_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
+    cartel_member3_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
     device_fingerprint = serializers.CharField(max_length=128, required=False, allow_blank=True, default='')
 
     def validate_phone(self, value):
@@ -332,6 +336,9 @@ class AdminCandidateDirectCreateSerializer(serializers.Serializer):
     slogan = serializers.CharField(max_length=255, required=False, allow_blank=True, default='')
     biography = serializers.CharField(required=False, allow_blank=True, default='')
     platform_priorities = serializers.CharField(required=False, allow_blank=True, default='')
+    cartel_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
+    cartel_member2_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
+    cartel_member3_name = serializers.CharField(max_length=150, required=False, allow_blank=True, default='')
     status = serializers.ChoiceField(choices=CandidateStatus.choices, required=False, default=CandidateStatus.APPROVED)
 
     def validate_phone(self, value):
