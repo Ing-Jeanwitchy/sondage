@@ -46,8 +46,26 @@ class CandidateProfileAdmin(admin.ModelAdmin):
 
 @admin.register(SurveyConfig)
 class SurveyConfigAdmin(admin.ModelAdmin):
-    list_display = ('id', 'is_registration_open', 'registration_deadline', 'is_voting_open', 'updated_at')
-    list_editable = ('is_registration_open', 'registration_deadline', 'is_voting_open')
+    list_display = ('id', 'is_registration_open', 'registration_deadline', 'is_voting_open', 'support_whatsapp', 'support_email', 'updated_at')
+    list_editable = ('is_registration_open', 'is_voting_open')
+    fieldsets = (
+        ('Peryòd & Kalandriye Sondaj', {
+            'fields': ('is_registration_open', 'registration_deadline', 'is_voting_open', 'show_official_publications')
+        }),
+        ('Kontak Sipò ("Bezwen Èd pou Fè Don an ?")', {
+            'fields': ('support_whatsapp', 'support_email'),
+            'description': 'Mete nimewo WhatsApp ak Imèl ofisyèl ki afiche pou asiste sitwayen k ap fè don yo.'
+        }),
+        ('Peman MonCash & Natcash', {
+            'fields': ('donation_moncash_number', 'donation_moncash_name', 'donation_natcash_number', 'donation_natcash_name')
+        }),
+        ('Peman Dyaspora (Zelle & CashApp)', {
+            'fields': ('donation_zelle_info', 'donation_zelle_name', 'donation_cashapp_tag')
+        }),
+        ('Peman Labank', {
+            'fields': ('donation_bank_info', 'donation_bank_name')
+        }),
+    )
 
 @admin.register(VoterProfile)
 class VoterProfileAdmin(admin.ModelAdmin):

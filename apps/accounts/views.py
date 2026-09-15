@@ -506,7 +506,9 @@ class AdminSurveyConfigView(APIView):
                 "zelle_name": getattr(config, 'donation_zelle_name', 'Nord-Ouest Citizen Civic Initiative'),
                 "cashapp_tag": getattr(config, 'donation_cashapp_tag', '$SondageNordOuest'),
                 "bank_info": getattr(config, 'donation_bank_info', 'Unibank HTG: 123-4567-890123 | Sogebank USD: 987-6543-210987'),
-                "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès')
+                "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès'),
+                "support_whatsapp": getattr(config, 'support_whatsapp', '+509 37 00 0000'),
+                "support_email": getattr(config, 'support_email', 'sondagenordouest@gmail.com'),
             }
         }, status=status.HTTP_200_OK)
 
@@ -546,6 +548,11 @@ class AdminSurveyConfigView(APIView):
         if 'show_official_publications' in request.data:
             config.show_official_publications = bool(request.data['show_official_publications'])
 
+        if 'support_whatsapp' in request.data:
+            config.support_whatsapp = str(request.data['support_whatsapp']).strip()
+        if 'support_email' in request.data:
+            config.support_email = str(request.data['support_email']).strip()
+
         # Mizajou Konfigirasyon Donasyon Sitwayen (Super Admin sèlman)
         donation_fields = [
             'donation_moncash_number', 'donation_moncash_name',
@@ -568,6 +575,8 @@ class AdminSurveyConfigView(APIView):
             if 'cashapp_tag' in dc: config.donation_cashapp_tag = str(dc['cashapp_tag']).strip()
             if 'bank_info' in dc: config.donation_bank_info = str(dc['bank_info']).strip()
             if 'bank_name' in dc: config.donation_bank_name = str(dc['bank_name']).strip()
+            if 'support_whatsapp' in dc: config.support_whatsapp = str(dc['support_whatsapp']).strip()
+            if 'support_email' in dc: config.support_email = str(dc['support_email']).strip()
 
         config.save()
         return Response({
@@ -587,10 +596,11 @@ class AdminSurveyConfigView(APIView):
                     "zelle_name": getattr(config, 'donation_zelle_name', 'Nord-Ouest Citizen Civic Initiative'),
                     "cashapp_tag": getattr(config, 'donation_cashapp_tag', '$SondageNordOuest'),
                     "bank_info": getattr(config, 'donation_bank_info', 'Unibank HTG: 123-4567-890123 | Sogebank USD: 987-6543-210987'),
-                    "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès')
+                    "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès'),
+                    "support_whatsapp": getattr(config, 'support_whatsapp', '+509 37 00 0000'),
+                    "support_email": getattr(config, 'support_email', 'sondagenordouest@gmail.com'),
                 }
             }
-
         }, status=status.HTTP_200_OK)
 
 
