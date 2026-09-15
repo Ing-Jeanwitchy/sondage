@@ -323,6 +323,19 @@ class SurveyConfig(models.Model):
         verbose_name="Afiche Seksyon Kominike ak Piblikasyon yo sou Paj Akèy ?"
     )
 
+    # Kontak Sipò pou seksyon "Bezwen Èd pou Fè Don an ?"
+    support_whatsapp = models.CharField(
+        max_length=30,
+        blank=True,
+        default='+50937000000',
+        verbose_name="Nimewo WhatsApp Sipò (fòma entènasyonal, ex: +50937000000)"
+    )
+    support_email = models.EmailField(
+        blank=True,
+        default='sondagenordouest@gmail.com',
+        verbose_name="Imèl Sipò Ofisyèl"
+    )
+
     updated_at = models.DateTimeField(auto_now=True)
 
 

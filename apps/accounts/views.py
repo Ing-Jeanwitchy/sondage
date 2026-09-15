@@ -190,7 +190,9 @@ class SurveyConfigView(APIView):
                     "zelle_name": getattr(config, 'donation_zelle_name', 'Nord-Ouest Citizen Civic Initiative'),
                     "cashapp_tag": getattr(config, 'donation_cashapp_tag', '$SondageNordOuest'),
                     "bank_info": getattr(config, 'donation_bank_info', 'Unibank HTG: 123-4567-890123 | Sogebank USD: 987-6543-210987'),
-                    "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès')
+                    "bank_name": getattr(config, 'donation_bank_name', 'Inisyativ Sitwayen Nòdwès'),
+                    "support_whatsapp": getattr(config, 'support_whatsapp', '+50937000000'),
+                    "support_email": getattr(config, 'support_email', 'sondagenordouest@gmail.com'),
                 }
             })
         except Exception as e:
