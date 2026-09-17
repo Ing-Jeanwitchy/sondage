@@ -150,9 +150,17 @@ class CandidateRegistrationSerializer(serializers.Serializer):
             attrs['device_fingerprint'] = device_fp
 
         if device_fp and DeviceRegistration.is_device_registered(device_fp):
-            raise serializers.ValidationError(
-                "Aparèy sa a deja anrejistre yon kont sou platfòm nan. Règleman sekirite a entèdi pou yon sèl aparèy fè plizyè enskripsyon (1 Aparèy = 1 Enskripsyon)."
+            request = self.context.get('request')
+            is_admin = bool(
+                request and request.user and request.user.is_authenticated and 
+                (getattr(request.user, 'role', None) in [UserRole.ADMIN, UserRole.OPERATOR] or 
+                 getattr(request.user, 'is_staff', False) or 
+                 getattr(request.user, 'is_superuser', False))
             )
+            if not is_admin:
+                raise serializers.ValidationError(
+                    "Aparèy sa a deja anrejistre yon kont sou platfòm nan. Règleman sekirite a entèdi pou yon sèl aparèy fè plizyè enskripsyon (1 Aparèy = 1 Enskripsyon)."
+                )
 
         return attrs
 

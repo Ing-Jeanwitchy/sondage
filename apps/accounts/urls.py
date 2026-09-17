@@ -13,6 +13,7 @@ from .views import (
     AdminSurveyConfigView,
     AdminDashboardStatsView,
     AdminPurgeTestDataView,
+    AdminResetDevicesView,
     AdminTeamListView,
     AdminTeamCreateView,
     AdminTeamDeleteView,
@@ -49,5 +50,7 @@ urlpatterns = [
     path('admin/survey-config/', AdminSurveyConfigView.as_view(), name='admin-survey-config'),
     path('admin/stats/', AdminDashboardStatsView.as_view(), name='admin-stats'),
     path('admin/purge-test-data/', AdminPurgeTestDataView.as_view(), name='admin-purge-test-data'),
+    path('admin/devices/reset/', AdminResetDevicesView.as_view(), name='admin-devices-reset'),
 ]
+
 

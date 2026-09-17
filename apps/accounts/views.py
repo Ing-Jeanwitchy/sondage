@@ -44,9 +44,21 @@ class CandidateRegisterView(APIView):
     def post(self, request, *args, **kwargs):
         # 1. Verifikasyon strik dat limit ak estati enskripsyon an
         config = SurveyConfig.get_config()
-        if config.is_expired():
+        
+        # Tcheke si se yon admin oswa operatè ki konekte
+        is_admin = bool(
+            request.user and 
+            request.user.is_authenticated and 
+            (getattr(request.user, 'role', None) in [UserRole.ADMIN, UserRole.OPERATOR] or 
+             getattr(request.user, 'is_staff', False) or 
+             getattr(request.user, 'is_superuser', False))
+        )
+
+        if (config.is_voting_open or not config.is_registration_open or config.is_expired()) and not is_admin:
             return Response(
-                {"error": "Peryòd enskripsyon kandida yo fèmen. Kalandriye a te rive nan bout li, pa gen okenn moun ki ka enskri ankò nan sondaj la."},
+                {
+                    "error": "Peryòd enskripsyon kandida yo fèmen ofisyèlman. Faz vòt sitwayen yo louvri. Okenn nouvo kandida pa ka enskri poukont li ankò. Se sèlman yon administratè ki gen otorizasyon pou anrejistre yon kandida."
+                },
                 status=status.HTTP_403_FORBIDDEN
             )
 
@@ -181,16 +193,17 @@ class SurveyConfigView(APIView):
         now = timezone.now()
         try:
             config = SurveyConfig.get_config()
-            seconds_remaining = max(0, int((config.registration_deadline - now).total_seconds())) if config.is_registration_open else 0
+            is_voting_open = bool(config.is_voting_open)
+            seconds_remaining = max(0, int((config.registration_deadline - now).total_seconds())) if (config.is_registration_open and not is_voting_open) else 0
             is_expired = config.is_expired()
 
             return Response({
-                "is_registration_open": config.is_registration_open,
+                "is_registration_open": config.is_registration_open and not is_voting_open,
                 "registration_deadline": config.registration_deadline.isoformat(),
                 "server_time": now.isoformat(),
                 "seconds_remaining": seconds_remaining,
                 "is_expired": is_expired,
-                "is_voting_open": config.is_voting_open,
+                "is_voting_open": is_voting_open,
                 "show_official_publications": getattr(config, 'show_official_publications', True),
                 "donation_config": {
                     "moncash_number": getattr(config, 'donation_moncash_number', '+509 37 00 0000'),
@@ -708,6 +721,7 @@ class AdminPurgeTestDataView(APIView):
 
         deleted_votes_count, _ = Vote.objects.all().delete()
         deleted_voters_count, _ = User.objects.filter(role=UserRole.VOTER).delete()
+        deleted_devices_count, _ = DeviceRegistration.objects.all().delete()
 
         clear_pending = request.data.get('clear_pending_candidates', False)
         deleted_pending_count = 0
@@ -721,10 +735,34 @@ class AdminPurgeTestDataView(APIView):
                     user.delete()
 
         return Response({
-            "message": f"Tout done tès yo netwaye avèk siksè ({deleted_votes_count} vòt, {deleted_voters_count} elektè tès). Kounye a sistèm nan pare pou resevwa sèlman done 100% reyèl !",
+            "message": f"Tout done tès yo netwaye avèk siksè ({deleted_votes_count} vòt, {deleted_voters_count} elektè tès, {deleted_devices_count} aparèy re-inisyalize). Kounye a sistèm nan pare pou resevwa sèlman done 100% reyèl !",
             "deleted_votes": deleted_votes_count,
             "deleted_voters": deleted_voters_count,
+            "deleted_devices": deleted_devices_count,
             "deleted_pending_candidates": deleted_pending_count
+        }, status=status.HTTP_200_OK)
+
+
+class AdminResetDevicesView(APIView):
+    """
+    Endpoint dedye pou Sipè Administratè re-inisyalize tout aparèy ki anrejistre yo
+    ak tout sesyon aktif yo, san efase kont itilizatè yo.
+    """
+    permission_classes = [IsAdminRole]
+
+    def post(self, request, *args, **kwargs):
+        from elections.models import Vote
+        from django.contrib.sessions.models import Session
+
+        deleted_devices_count, _ = DeviceRegistration.objects.all().delete()
+        deleted_sessions_count, _ = Session.objects.all().delete()
+        cleared_votes_count = Vote.objects.exclude(device_fingerprint='').update(device_fingerprint='')
+
+        return Response({
+            "message": f"Tout aparèy yo re-inisyalize avèk siksè ! ({deleted_devices_count} aparèy debloke, {deleted_sessions_count} sesyon fèmen, {cleared_votes_count} anpwent vòt netwaye).",
+            "deleted_devices": deleted_devices_count,
+            "deleted_sessions": deleted_sessions_count,
+            "cleared_votes_fingerprints": cleared_votes_count
         }, status=status.HTTP_200_OK)
 
 

@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.utils import timezone
-from .models import User, CandidateProfile, SurveyConfig, VoterProfile
+from .models import User, CandidateProfile, SurveyConfig, VoterProfile, DeviceRegistration
 
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
@@ -77,4 +77,20 @@ class VoterProfileAdmin(admin.ModelAdmin):
     def phone_display(self, obj):
         return obj.user.phone
     phone_display.short_description = "Téléphone"
+
+
+@admin.register(DeviceRegistration)
+class DeviceRegistrationAdmin(admin.ModelAdmin):
+    list_display = ('user_phone', 'role', 'ip_address', 'device_fingerprint_short', 'created_at')
+    list_filter = ('role', 'created_at')
+    search_fields = ('user__phone', 'device_fingerprint', 'ip_address')
+    readonly_fields = ('id', 'device_fingerprint', 'created_at')
+
+    def user_phone(self, obj):
+        return obj.user.phone if obj.user else '-'
+    user_phone.short_description = "Numéro Utilisateur"
+
+    def device_fingerprint_short(self, obj):
+        return f"{obj.device_fingerprint[:16]}..." if obj.device_fingerprint else '-'
+    device_fingerprint_short.short_description = "Empreinte Appareil"
 

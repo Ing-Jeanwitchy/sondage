@@ -356,7 +356,7 @@ class SurveyConfig(models.Model):
 
     def is_expired(self):
         from django.utils import timezone
-        if not self.is_registration_open:
+        if not self.is_registration_open or self.is_voting_open:
             return True
         return timezone.now() >= self.registration_deadline
 
