@@ -16,8 +16,10 @@ def health_check(request):
         connection.ensure_connection()
         db_ok = True
         try:
-            from accounts.models import User, SurveyConfig
-            from elections.models import Vote
+            from django.apps import apps
+            User = apps.get_model('accounts', 'User')
+            SurveyConfig = apps.get_model('accounts', 'SurveyConfig')
+            Vote = apps.get_model('elections', 'Vote')
             config = SurveyConfig.get_config()
             db_info = {
                 "is_registration_open": config.is_registration_open,
@@ -41,7 +43,10 @@ def health_check(request):
     }, status=200)
 
 
-from elections.views import DonationCreateView, AdminDonationListView
+try:
+    from elections.views import DonationCreateView, AdminDonationListView
+except ImportError:
+    from apps.elections.views import DonationCreateView, AdminDonationListView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -53,5 +58,15 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+from django.urls import re_path
+from django.views.static import serve
+
+if not settings.IS_CLOUDINARY_ACTIVE:
+    urlpatterns += [
+        re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+    ]
+elif settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+

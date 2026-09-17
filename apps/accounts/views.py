@@ -83,11 +83,22 @@ class VoterRegisterView(APIView):
     Endpoint d'inscription pour les électeurs / participants citoyens du Nord-Ouest.
     Création du compte User (Role VOTER) et du profil avec commune verrouillée de façon permanente.
     Restreint strictement à une seule inscription par appareil physique.
+    Bloque strictement l'inscription électeur pendant la période d'inscription des candidats.
     """
     permission_classes = [permissions.AllowAny]
     throttle_classes = [AuthRateThrottle]
 
     def post(self, request, *args, **kwargs):
+        # 1. Verifikasyon peryòd : Pandan peryòd enskripsyon kandida yo, oken elektè pa ka enskri
+        config = SurveyConfig.get_config()
+        if not config.is_voting_open:
+            return Response(
+                {
+                    "error": "Enskripsyon elektè yo poko louvri. Kounye a se sèlman peryòd enskripsyon kandida yo ki an kou. Sitwayen yo ap ka enskri kòm elektè lè sesyon vòt la louvri ofisyèlman."
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+
         serializer = VoterRegistrationSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             try:

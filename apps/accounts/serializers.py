@@ -38,6 +38,33 @@ def extract_clean_ip(request):
 
     return ip_addr or None
 
+class AbsoluteImageField(serializers.ImageField):
+    """
+    Retounen URL absoli pou foto kandida yo.
+    Si foto a sou Cloudinary (URL kòmanse ak http), retounen l dirèkteman.
+    Si foto a se yon chemen lokal (/media/...), ajoute backend URL devan.
+    """
+    def to_representation(self, value):
+        if not value:
+            return None
+        try:
+            url = value.url
+        except Exception:
+            return None
+        # Si URL la deja absoli (Cloudinary oswa lòt CDN), retounen l dirèkteman
+        if url.startswith('http://') or url.startswith('https://'):
+            # Toujou fòse HTTPS
+            if url.startswith('http://'):
+                url = 'https://' + url[7:]
+            return url
+        # Si URL relatif, konstwi URL absoli ak request la
+        request = self.context.get('request')
+        if request:
+            return request.build_absolute_uri(url)
+        # Fallback: retounen URL relatif la (frontend ap ajoute baseURL)
+        return url
+
+
 class CandidateProfileSerializer(serializers.ModelSerializer):
     """
     Serializer pour l'affichage public et privé du profil d'un candidat.
@@ -47,6 +74,7 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
     status_display = serializers.CharField(source='get_status_display', read_only=True)
     phone = serializers.CharField(source='user.phone', read_only=True)
     email = serializers.EmailField(source='user.email', read_only=True)
+    photo = AbsoluteImageField(read_only=True)
 
     class Meta:
         model = CandidateProfile
@@ -60,6 +88,7 @@ class CandidateProfileSerializer(serializers.ModelSerializer):
             'withdrawal_requested_at', 'created_at'
         ]
         read_only_fields = ['id', 'status', 'withdrawal_requested', 'withdrawal_reason', 'withdrawal_requested_at', 'created_at']
+
 
 
 class CandidateRegistrationSerializer(serializers.Serializer):

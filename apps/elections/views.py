@@ -105,9 +105,13 @@ class BallotListView(APIView):
                 "candidates": BallotCandidateSerializer(candidate_qs, many=True).data
             })
 
+        from accounts.models import SurveyConfig
+        survey_cfg = SurveyConfig.get_config()
+
         return Response({
             "voter_phone": user.phone,
             "voter_commune": voter_commune,
+            "is_voting_open": survey_cfg.is_voting_open,
             "ballots": ballots_data
         }, status=status.HTTP_200_OK)
 
@@ -122,6 +126,14 @@ class CastVoteView(APIView):
 
     @transaction.atomic
     def post(self, request, *args, **kwargs):
+        # 0. Tcheke si faz vòt la louvri ofisyèlman
+        from accounts.models import SurveyConfig
+        survey_cfg = SurveyConfig.get_config()
+        if not survey_cfg.is_voting_open:
+            return Response({
+                "error": "Faz vòt la poko louvri. Kounye a se faz enskripsyon kandida yo ki an kou. Oken sitwayen pa ka vote toutotan sesyon vòt la pa aktif ofisyèlman."
+            }, status=status.HTTP_403_FORBIDDEN)
+
         serializer = CastVoteSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

@@ -188,8 +188,18 @@ class TestHealthCheckAPI(TestCase):
 class TestVoterRegistrationAPI(TestCase):
     """Tests de l'endpoint d'inscription des électeurs."""
 
-    def test_register_voter_success(self):
-        """Inscription réussie d'un électeur."""
+    def setUp(self):
+        # Pa defo, pou tès enskripsyon elektè ki dwe reyisi, louvri faz vòt la
+        config = SurveyConfig.get_config()
+        config.is_voting_open = True
+        config.save()
+
+    def test_register_voter_blocked_during_candidate_phase(self):
+        """Pandan faz enskripsyon kandida yo (vòt fèmen), oken elektè pa ka enskri."""
+        config = SurveyConfig.get_config()
+        config.is_voting_open = False
+        config.save()
+
         client = APIClient()
         response = client.post('/api/auth/register/voter/', {
             'phone': '+50937000020',
@@ -197,11 +207,47 @@ class TestVoterRegistrationAPI(TestCase):
             'password': 'SecurePass123!',
             'commune': 'PORT_DE_PAIX',
         }, format='json')
+        assert response.status_code == http_status.HTTP_403_FORBIDDEN
+        assert 'poko louvri' in response.json().get('error', '').lower()
+
+    def test_register_voter_success(self):
+        """Inscription réussie d'un électeur lè faz vòt la louvri."""
+        client = APIClient()
+        response = client.post('/api/auth/register/voter/', {
+            'phone': '+50937000020',
+            'email': 'voter20@example.com',
+            'password': 'SecurePass123!',
+            'commune': 'PORT_DE_PAIX',
+            'device_fingerprint': 'dev_test_unique_voter_fp_1'
+        }, format='json')
         assert response.status_code == http_status.HTTP_201_CREATED
         data = response.json()
         assert 'tokens' in data
         assert 'user' in data
         assert data['user']['role'] == 'VOTER'
+
+    def test_register_voter_duplicate_device_blocked(self):
+        """Menm aparèy la pa ka anrejistre yon 2e kont (1 Aparèy = 1 Enskripsyon)."""
+        client = APIClient()
+        # 1ère inscription avec ce device
+        client.post('/api/auth/register/voter/', {
+            'phone': '+50937000020',
+            'email': 'voter20@example.com',
+            'password': 'SecurePass123!',
+            'commune': 'PORT_DE_PAIX',
+            'device_fingerprint': 'dev_test_shared_physical_device'
+        }, format='json')
+
+        # 2e inscription avec le même device
+        response = client.post('/api/auth/register/voter/', {
+            'phone': '+50937000022',
+            'email': 'voter22@example.com',
+            'password': 'SecurePass123!',
+            'commune': 'JEAN_RABEL',
+            'device_fingerprint': 'dev_test_shared_physical_device'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_400_BAD_REQUEST
+        assert 'aparèy' in response.json().get('error', '').lower()
 
     def test_register_voter_duplicate_phone(self):
         """Inscription avec un numéro déjà utilisé doit échouer."""
@@ -212,6 +258,7 @@ class TestVoterRegistrationAPI(TestCase):
             'email': 'voter21@example.com',
             'password': 'SecurePass123!',
             'commune': 'PORT_DE_PAIX',
+            'device_fingerprint': 'dev_test_phone_dup_1'
         }, format='json')
         # 2e inscription (même téléphone)
         response = client.post('/api/auth/register/voter/', {
@@ -219,6 +266,7 @@ class TestVoterRegistrationAPI(TestCase):
             'email': 'voter21_other@example.com',
             'password': 'AnotherPass!',
             'commune': 'JEAN_RABEL',
+            'device_fingerprint': 'dev_test_phone_dup_2'
         }, format='json')
         assert response.status_code == http_status.HTTP_400_BAD_REQUEST
 

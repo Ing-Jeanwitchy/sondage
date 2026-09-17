@@ -110,7 +110,15 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # Neon Serverless PostgreSQL pèmanan pou pwodiksyon ak devlopman
 NEON_DATABASE_URL = "postgresql://neondb_owner:npg_2qWJy0bkjNxV@ep-long-credit-aefr1km3-pooler.c-2.us-east-2.aws.neon.tech/neondb?sslmode=require"
 database_url = os.getenv('DATABASE_URL') or NEON_DATABASE_URL
-if database_url:
+
+if 'test' in sys.argv:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+elif database_url:
     # Si connexion Neon avec pooler (PgBouncer), conn_max_age doit être 0
     is_pooled = 'pooler' in database_url
     DATABASES = {
@@ -155,10 +163,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Configuration Cloudinary (Médias dans le cloud)
-CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', '').strip()
-CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME', '').strip()
-CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY', '').strip()
-CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET', '').strip()
+CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', 'cloudinary://295252787266561:qglmZ2Q-7bkmCEp9jFTeEP68bM8@doxpjykg8').strip()
+CLOUDINARY_CLOUD_NAME = os.getenv('CLOUDINARY_CLOUD_NAME', 'doxpjykg8').strip()
+CLOUDINARY_API_KEY = os.getenv('CLOUDINARY_API_KEY', '295252787266561').strip()
+CLOUDINARY_API_SECRET = os.getenv('CLOUDINARY_API_SECRET', 'qglmZ2Q-7bkmCEp9jFTeEP68bM8').strip()
 
 # Si CLOUDINARY_URL founi (fòma: cloudinary://API_KEY:API_SECRET@CLOUD_NAME)
 if CLOUDINARY_URL and not CLOUDINARY_CLOUD_NAME:

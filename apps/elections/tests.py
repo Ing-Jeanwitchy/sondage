@@ -214,6 +214,40 @@ class TestCastVoteAPI(TestCase):
         }, format='json')
         assert response.status_code in (401, 403)
 
+    def test_cannot_vote_when_voting_session_closed(self):
+        """Oken moun pa ka vote toutotan faz vòt la pa louvri ofisyèlman (enskripsyon an kou)."""
+        from accounts.models import SurveyConfig
+        config = SurveyConfig.get_config()
+        config.is_voting_open = False
+        config.save()
+
+        client = APIClient()
+        client.force_authenticate(user=self.voter)
+        response = client.post('/api/elections/vote/', {
+            'candidate_id': str(self.candidate.id),
+            'post': 'SENATEUR',
+            'device_fingerprint': 'dev_test_fingerprint_unique_1'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_403_FORBIDDEN
+        assert 'poko louvri' in response.json().get('error', '').lower()
+
+    def test_can_vote_when_voting_session_active(self):
+        """Sitwayen ka vote sèlman lè faz vòt la aktif ofisyèlman."""
+        from accounts.models import SurveyConfig
+        config = SurveyConfig.get_config()
+        config.is_voting_open = True
+        config.save()
+
+        client = APIClient()
+        client.force_authenticate(user=self.voter)
+        response = client.post('/api/elections/vote/', {
+            'candidate_id': str(self.candidate.id),
+            'post': 'SENATEUR',
+            'device_fingerprint': 'dev_test_fingerprint_unique_active'
+        }, format='json')
+        assert response.status_code == http_status.HTTP_201_CREATED
+        assert 'receipt' in response.json()
+
 
 class TestAuditAPI(TestCase):
     """Tests de l'endpoint d'audit admin des votes."""
