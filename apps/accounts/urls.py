@@ -25,6 +25,10 @@ from .views import (
     CheckDeviceRegistrationView,
     VoterDashboardView
 )
+try:
+    from elections.views import AppTranslationView
+except ImportError:
+    from apps.elections.views import AppTranslationView
 
 urlpatterns = [
     path('auth/register/candidate/', CandidateRegisterView.as_view(), name='register-candidate'),
@@ -51,6 +55,8 @@ urlpatterns = [
     path('admin/stats/', AdminDashboardStatsView.as_view(), name='admin-stats'),
     path('admin/purge-test-data/', AdminPurgeTestDataView.as_view(), name='admin-purge-test-data'),
     path('admin/devices/reset/', AdminResetDevicesView.as_view(), name='admin-devices-reset'),
+    path('translations/', AppTranslationView.as_view(), name='accounts-translations'),
+    path('elections/translations/', AppTranslationView.as_view(), name='accounts-elections-translations'),
 ]
 
 
