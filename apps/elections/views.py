@@ -512,6 +512,33 @@ class AppTranslationView(APIView):
                 result[item.key] = val if val else item.text_ht
             return Response(result, status=status.HTTP_200_OK)
 
+        # Si yo mande fòma detaye pou Dashboard Admin lan
+        if request.query_params.get('format') in ['detailed', 'list']:
+            search_query = request.query_params.get('search', '').strip().lower()
+            items_list = []
+            for item in qs:
+                if search_query:
+                    if (search_query not in item.key.lower() and 
+                        search_query not in item.text_ht.lower() and 
+                        search_query not in item.text_fr.lower() and 
+                        search_query not in item.text_en.lower() and
+                        search_query not in item.category.lower()):
+                        continue
+                items_list.append({
+                    "id": item.id,
+                    "key": item.key,
+                    "category": item.category,
+                    "text_ht": item.text_ht,
+                    "text_fr": item.text_fr,
+                    "text_en": item.text_en,
+                    "description": item.description,
+                    "updated_at": item.updated_at.isoformat() if item.updated_at else None
+                })
+            return Response({
+                "count": len(items_list),
+                "results": items_list
+            }, status=status.HTTP_200_OK)
+
         # Pa defo, delivre tout 3 diksyonè yo konplè
         dict_ht = {}
         dict_fr = {}
@@ -528,6 +555,60 @@ class AppTranslationView(APIView):
                 "ht": dict_ht,
                 "fr": dict_fr,
                 "en": dict_en,
+            }
+        }, status=status.HTTP_200_OK)
+
+    def put(self, request, *args, **kwargs):
+        """
+        Mete a jou yon tradiksyon nan baz de done a dirèkteman depi nan Dashboard Admin lan.
+        Rezève pou Administratè yo sèlman.
+        """
+        from .models import AppTranslation
+        from accounts.permissions import IsAdminRole
+
+        # Verifikasyon sekirite : Sèlman Admin ki ka modifye tradiksyon
+        if not request.user.is_authenticated:
+            return Response({"error": "Ou dwe konekte kòm Administratè."}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        user_role = getattr(request.user, 'role', '')
+        if user_role not in ['ADMIN', 'MODERATOR'] and not request.user.is_staff and not request.user.is_superuser:
+            return Response({"error": "Aksè rezève pou Administratè yo sèlman."}, status=status.HTTP_403_FORBIDDEN)
+
+        trans_id = request.data.get('id')
+        trans_key = request.data.get('key')
+
+        if not trans_id and not trans_key:
+            return Response({"error": "ID oswa Kle tradiksyon an obligatwa."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            if trans_id:
+                obj = AppTranslation.objects.get(id=trans_id)
+            else:
+                obj = AppTranslation.objects.get(key=trans_key)
+        except AppTranslation.DoesNotExist:
+            return Response({"error": "Tradiksyon sa a pa jwenn nan baz de done a."}, status=status.HTTP_404_NOT_FOUND)
+
+        if 'text_ht' in request.data:
+            obj.text_ht = request.data['text_ht']
+        if 'text_fr' in request.data:
+            obj.text_fr = request.data['text_fr']
+        if 'text_en' in request.data:
+            obj.text_en = request.data['text_en']
+        if 'category' in request.data:
+            obj.category = request.data['category']
+
+        obj.save()
+
+        return Response({
+            "message": f"Tradiksyon « {obj.key} » mete a jou avèk siksè nan baz de done a !",
+            "item": {
+                "id": obj.id,
+                "key": obj.key,
+                "category": obj.category,
+                "text_ht": obj.text_ht,
+                "text_fr": obj.text_fr,
+                "text_en": obj.text_en,
+                "updated_at": obj.updated_at.isoformat()
             }
         }, status=status.HTTP_200_OK)
 
