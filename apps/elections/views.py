@@ -612,3 +612,49 @@ class AppTranslationView(APIView):
             }
         }, status=status.HTTP_200_OK)
 
+
+class AutoTranslateView(APIView):
+    """
+    Tradui otomatikman yon tèks soti nan yon lang (Kreyòl, Franse, oswa Angle)
+    pou ale nan 2 lòt lang yo gras ak motè tradiksyon an.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        import urllib.request
+        import urllib.parse
+        import json
+
+        text = (request.data.get('text') or '').strip()
+        source_lang = request.data.get('source_lang', 'auto')
+
+        if not text:
+            return Response({"error": "Tèks pou tradui a vid."}, status=status.HTTP_400_BAD_REQUEST)
+
+        def gtx_translate(q, sl, tl):
+            if not q or sl == tl:
+                return q
+            try:
+                url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl={sl}&tl={tl}&dt=t&q=" + urllib.parse.quote(q)
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'})
+                with urllib.request.urlopen(req, timeout=8) as resp:
+                    data = json.loads(resp.read().decode('utf-8'))
+                    return ''.join([chunk[0] for chunk in data[0] if chunk and chunk[0]])
+            except Exception as e:
+                return q
+
+        # Si source_lang se auto oswa espesifye
+        sl = source_lang if source_lang in ['ht', 'fr', 'en'] else 'auto'
+
+        res_ht = text if sl == 'ht' else gtx_translate(text, sl, 'ht')
+        res_fr = text if sl == 'fr' else gtx_translate(text, sl, 'fr')
+        res_en = text if sl == 'en' else gtx_translate(text, sl, 'en')
+
+        return Response({
+            "source_lang": sl,
+            "text_ht": res_ht,
+            "text_fr": res_fr,
+            "text_en": res_en
+        }, status=status.HTTP_200_OK)
+
+

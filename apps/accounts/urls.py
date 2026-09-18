@@ -26,9 +26,9 @@ from .views import (
     VoterDashboardView
 )
 try:
-    from elections.views import AppTranslationView
+    from elections.views import AppTranslationView, AutoTranslateView
 except ImportError:
-    from apps.elections.views import AppTranslationView
+    from apps.elections.views import AppTranslationView, AutoTranslateView
 
 urlpatterns = [
     path('auth/register/candidate/', CandidateRegisterView.as_view(), name='register-candidate'),
@@ -56,7 +56,9 @@ urlpatterns = [
     path('admin/purge-test-data/', AdminPurgeTestDataView.as_view(), name='admin-purge-test-data'),
     path('admin/devices/reset/', AdminResetDevicesView.as_view(), name='admin-devices-reset'),
     path('translations/', AppTranslationView.as_view(), name='accounts-translations'),
+    path('translations/auto-translate/', AutoTranslateView.as_view(), name='accounts-translations-auto'),
     path('elections/translations/', AppTranslationView.as_view(), name='accounts-elections-translations'),
+    path('elections/translations/auto-translate/', AutoTranslateView.as_view(), name='accounts-elections-translations-auto'),
 ]
 
 

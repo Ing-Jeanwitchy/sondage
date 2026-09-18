@@ -44,9 +44,9 @@ def health_check(request):
 
 
 try:
-    from elections.views import DonationCreateView, AdminDonationListView, AppTranslationView
+    from elections.views import DonationCreateView, AdminDonationListView, AppTranslationView, AutoTranslateView
 except ImportError:
-    from apps.elections.views import DonationCreateView, AdminDonationListView, AppTranslationView
+    from apps.elections.views import DonationCreateView, AdminDonationListView, AppTranslationView, AutoTranslateView
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -54,6 +54,7 @@ urlpatterns = [
     path('api/', include('accounts.urls')),
     path('api/elections/', include('elections.urls')),
     path('api/translations/', AppTranslationView.as_view(), name='api-translations'),
+    path('api/translations/auto-translate/', AutoTranslateView.as_view(), name='api-translations-auto'),
     path('api/donations/', DonationCreateView.as_view(), name='api-donations'),
     path('api/admin/donations/', AdminDonationListView.as_view(), name='api-admin-donations'),
 ]
