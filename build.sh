@@ -10,3 +10,6 @@ python manage.py collectstatic --no-input
 
 echo "==> Ekzekisyon migrasyon baz de done PostgreSQL..."
 python manage.py migrate
+
+echo "==> Senkwonizasyon tradiksyon yo nan baz de done..."
+python manage.py seed_translations

@@ -158,3 +158,41 @@ class Donation(models.Model):
 
     def __str__(self):
         return f"{self.donor_name} - {self.amount} {self.currency} ({self.payment_method})"
+
+
+class AppTranslation(models.Model):
+    """
+    Modèl pou jere tout tradiksyon ak kontni tèks platfòm nan nan Baz de Done.
+    Sipòte Kreyòl (ht), Français (fr), ak English (en).
+    """
+    key = models.CharField(
+        max_length=150, 
+        unique=True, 
+        db_index=True, 
+        verbose_name="Kle Tradiksyon (Key)"
+    )
+    category = models.CharField(
+        max_length=80, 
+        blank=True, 
+        default="GENERAL", 
+        db_index=True, 
+        verbose_name="Kategori / Seksyon"
+    )
+    text_ht = models.TextField(verbose_name="Tèks Kreyòl (HT)")
+    text_fr = models.TextField(blank=True, default='', verbose_name="Tèks Français (FR)")
+    text_en = models.TextField(blank=True, default='', verbose_name="Tèks English (EN)")
+    description = models.CharField(
+        max_length=255, 
+        blank=True, 
+        default='', 
+        verbose_name="Deskripsyon kote li itilize"
+    )
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Dènye modifikasyon")
+
+    class Meta:
+        verbose_name = "Tradiksyon Platfòm nan"
+        verbose_name_plural = "Tradiksyon Platfòm nan yo"
+        ordering = ['category', 'key']
+
+    def __str__(self):
+        return f"{self.key} [{self.category}]"

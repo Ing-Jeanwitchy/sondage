@@ -8,7 +8,8 @@ from .views import (
     PublicAnnouncementListView,
     AdminAnnouncementView,
     DonationCreateView,
-    AdminDonationListView
+    AdminDonationListView,
+    AppTranslationView
 )
 from .export_views import (
     AdminExportResultsCSVView,
@@ -29,6 +30,7 @@ urlpatterns = [
     path('admin/audit-votes/', AdminVoteAuditView.as_view(), name='admin-audit-votes'),
     path('admin/export/results-csv/', AdminExportResultsCSVView.as_view(), name='admin-export-results-csv'),
     path('admin/export/candidates-csv/', AdminExportCandidatesCSVView.as_view(), name='admin-export-candidates-csv'),
+    path('translations/', AppTranslationView.as_view(), name='app-translations'),
     path('admin/export/votes-audit-csv/', AdminExportVotesAuditCSVView.as_view(), name='admin-export-votes-audit-csv'),
 ]
 

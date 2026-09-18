@@ -484,3 +484,50 @@ class AdminDonationListView(APIView):
             "donations": serializer.data
         }, status=status.HTTP_200_OK)
 
+
+class AppTranslationView(APIView):
+    """
+    Endpoint piblik pou delivre tout tradiksyon ak kontni tèks platfòm nan ki estoke nan Baz de Done a.
+    Sipòte filtraj pa lang (?lang=ht|fr|en) oswa pa kategori (?category=...).
+    """
+    permission_classes = [permissions.AllowAny]
+
+    def get(self, request, *args, **kwargs):
+        from .models import AppTranslation
+
+        lang = request.query_params.get('lang')
+        category = request.query_params.get('category')
+
+        qs = AppTranslation.objects.all()
+        if category:
+            qs = qs.filter(category__iexact=category)
+
+        # Si kliyan an mande yon sèl lang espesifik
+        if lang in ['ht', 'fr', 'en']:
+            field_name = f"text_{lang}"
+            result = {}
+            for item in qs:
+                val = getattr(item, field_name, '')
+                # Si tradiksyon lang nan vid, fallback sou Kreyòl (HT)
+                result[item.key] = val if val else item.text_ht
+            return Response(result, status=status.HTTP_200_OK)
+
+        # Pa defo, delivre tout 3 diksyonè yo konplè
+        dict_ht = {}
+        dict_fr = {}
+        dict_en = {}
+
+        for item in qs:
+            dict_ht[item.key] = item.text_ht
+            dict_fr[item.key] = item.text_fr if item.text_fr else item.text_ht
+            dict_en[item.key] = item.text_en if item.text_en else item.text_ht
+
+        return Response({
+            "count": qs.count(),
+            "translations": {
+                "ht": dict_ht,
+                "fr": dict_fr,
+                "en": dict_en,
+            }
+        }, status=status.HTTP_200_OK)
+
